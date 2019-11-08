@@ -1,0 +1,34 @@
+#compdef baur
+
+_baur(){
+    local ret=1
+    local -a args
+
+    args+=(
+        '-S[Install taget packages]:pkg:'
+        '-s[Seatch for packages]:pkg:'
+        '-i[Show packages information]:pkg:'
+        '-d[Download Package snapshot]:pkg:'
+        '-b[Search by Criteria]:model:((
+            nd\:Name\,\ Description\ \(default\)
+            no\:Name\ Only
+            pb\:Package\ Base
+            en\:Exact\ Name
+            ep\:Exact\ Package\ Base
+            k\:Keywords
+            m\:Maintainer
+            cm\:Co-maintainer
+            mc\:Maintainer\,\ Co-maintainer
+            s\:Submitter
+        ))'
+        '-c[Compile package]'
+        '-e[Edit PKGBUILD in installation mode]'
+        '-h[Print help usage]'
+    )
+
+    _arguments $args[@] && ret=0
+    return ret
+
+}
+
+_baur

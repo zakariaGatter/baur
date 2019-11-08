@@ -3,11 +3,12 @@
 #-------#
 # NOTES #
 #-------#
+# remove package : sudo pacman -Rsn
 
 #----------#
 # PACKAGES #
 #----------#
-# curl, recode, awk, grep, tar, gzip, makepkg, pacman, coreutils
+# curl, recode, awk, grep, tar, makepkg, pacman, coreutils
 
 #-------#
 # DEBUG #
@@ -63,7 +64,7 @@ _list_(){
 [ "$_BAUR_SEARCH_" ] || :> "$_CACHE_SEARCH_"
 
 # get list of search result (try to find a way better then use awk)
-\recode html $_CACHE_SOURCE_ | \awk '/<td><a href="\/packages\//{
+\recode html < "$_CACHE_SOURCE_" | \awk '/<td><a href="\/packages\//{
 	gsub(/<[^>]*>/,"",$0)
 	gsub(/^[[:space:]]*/,"",$0)
 	printf "%s", $0
@@ -76,7 +77,7 @@ _list_(){
 	}
 
 	print ""
-}' >> "$_CACHE_SEARCH_"
+}' > "$_CACHE_SEARCH_"
 }
 #}}}
 
@@ -341,7 +342,7 @@ if \curl -s "https://aur.archlinux.org/packages/$PKG" -o "$_CACHE_INFO_" ; then
     ( \grep '404 - Page Not Found' "$_CACHE_INFO_" &> /dev/null ) && _em_ "$PKG ?!!. Did You type the name correct"
 
     # get information
-    \recode html $_CACHE_INFO_ | \awk '/<table id="pkginfo">/,/<\/table>/ {
+    \recode html < "$_CACHE_INFO_" | \awk '/<table id="pkginfo">/,/<\/table>/ {
         if($2 == "class=\"keyword\""){
             gsub(/<[^>]*>/,"",$0)
             printf "%s ", $0
@@ -514,4 +515,3 @@ _main_ "$@"
 	_selection_
 }
 #}}}
-
