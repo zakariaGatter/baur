@@ -98,7 +98,7 @@ _packages_(){
 #--------------------------#{{{
 _source_(){
 #if no package giving
-[ -z "$1" -a -z "$_PAGE_" ] && _em_ "You give me nothing to looking for "
+[ -z "$1" ] && [ -z "$_PAGE_" ] && _em_ "You give me nothing to looking for "
 
 # get package name
 local _pkg_=${1}
@@ -277,7 +277,7 @@ for i in ${_SELECT_[@]} ; do
 	} || {
         # if u user the menu get the name from list
 		i=$(($i - 1))
-        local _PKG_=${_LIST_PKG_[$i]}
+        _PKG_=${_LIST_PKG_[$i]}
 	}
 
 	# just simple msg
