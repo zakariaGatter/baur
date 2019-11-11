@@ -248,7 +248,7 @@ while true; do
     for i in ${_SELECT_} ; do
         (( i = i )) || _em_ "What this ($i) Lettre doing in the Selection ??"
 
-        (( i <= 0 || i > _COUNT_ )) && _em_ "Just like McDonald's, Pick what's in the menu"
+        (( i <= 0 || i > _COUNT_ )) || _em_ "Just like McDonald's, Pick what's in the menu"
     done
 
     _BAUR_SELECT_=true
@@ -267,14 +267,21 @@ _SELECT_=( ${_SELECT_:-${@}} )
 
 # create loop for pkgs
 for i in ${_SELECT_[@]} ; do
-	# if you use -d just get the name direct
-	[ "$_BAUR_SELECT_" ] || {
-		local _PKG_=$i
-	} && {
-        # if u user the menu get the name from list
-		i=$(($i - 1))
-        _PKG_=${_LIST_PKG_[$i]}
-	}
+#	# if you use -d just get the name direct
+#	[ "$_BAUR_SELECT_" ] || {
+#		local _PKG_=$i
+#	} && {
+#        # if u user the menu get the name from list
+#		i=$(($i - 1))
+#        local _PKG_=${_LIST_PKG_[$i]}
+#	}
+
+    [ "$_BAUR_SELECT_" ] && {
+        i=$((i - 1))
+        local _PKG_="${_LIST_PKG_[$i]}"
+    } || {
+        local _PKG_="$i"
+    }
 
 	# just simple msg
 	echo -en "Download ${_PKG_} Snapshot ... \r"
@@ -484,9 +491,6 @@ while getopts ":S:R:s:i:d:b:cekh" OPT ; do
 	esac
 done
 shift $((OPTIND-1))
-
-# if you out just pkg name with no options
-[ "$_BAUR_LIST_" ] || _PKG_="${1}"
 }
 #}}}
 
@@ -499,34 +503,24 @@ _main_ "$@"
 #----------------------#
 # RUN SELECTED OPTIONS #
 #----------------------#{{{
-[ "$_BAUR_INSTALL_" ] && {
-    (( _BAUR_MA_ = 1 )) || _em_ "I have only Two Hands can't do many jobs at once (-d,-S,-s,-i,-R)"
-	_pkgbuild_ "${_BAUR_INSTALL_[@]}"
-}
+(( _BAUR_MA_ = 1 )) || _em_ "I have only Two Hands can't do many jobs at once (-d,-S,-s,-i,-R)"
 
-[ "$_BAUR_REMOVE_" ] && {
-    (( _BAUR_MA_ = 1 )) || _em_ "I have only Two Hands can't do many jobs at once (-d,-S,-s,-i,-R)"
-    _remove_ "${_BAUR_REMOVE_[@]}"
+[ "$_BAUR_INSTALL_" ] && _pkgbuild_ "${_BAUR_INSTALL_[@]}"
+
+[ "$_BAUR_REMOVE_" ] && _remove_ "${_BAUR_REMOVE_[@]}"
+
+[ "$_BAUR_DOWNLOAD_" ] && _pkgbuild_ "${_BAUR_DOWNLOAD_[@]}"
+
+[ "$_BAUR_INFO_" ] && _info_ "$_BAUR_INFO_"
+
+[ "$_BAUR_LIST_" ] || {
+	_source_ "$@"
+	_selection_
+    _pkgbuild_
 }
 
 [ "$_BAUR_SEARCH_" ] && {
-    (( _BAUR_MA_ = 1 )) || _em_ "I have only Two Hands can't do many jobs at once (-d,-S,-s,-i,-R)"
 	_source_ "$_BAUR_SEARCH_"
 	_resoult_
-}
-
-[ "$_BAUR_DOWNLOAD_" ] && {
-    (( _BAUR_MA_ = 1 )) || _em_ "I have only Two Hands can't do many jobs at once (-d,-S,-s,-i,-R)"
-	_pkgbuild_ "${_BAUR_DOWNLOAD_[@]}"
-}
-
-[ "$_BAUR_INFO_" ] && {
-    (( _BAUR_MA_ = 1 )) || _em_ "I have only Two Hands can't do many jobs at once (-d,-S,-s,-i,-R)"
-	_info_ "$_BAUR_INFO_"
-}
-
-[ "$_BAUR_LIST_" ] || {
-	_source_ "$_PKG_"
-	_selection_
 }
 #}}}
