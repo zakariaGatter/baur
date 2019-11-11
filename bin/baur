@@ -529,5 +529,6 @@ _main_ "$@"
 [ "$_BAUR_LIST_" ] || {
 	_source_ "$_PKG_"
 	_selection_
+    _pkgbuild_
 }
 #}}}
