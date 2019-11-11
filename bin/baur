@@ -26,6 +26,7 @@ _name_=${0##*/}
 #----------------#{{{
 _CACHE_="$HOME/.cache/BAUR"
 [ -d "$_CACHE_" ] || \mkdir -p "$_CACHE_"
+_LIST_PKG_=()
 #}}}
 
 #------------#
@@ -200,14 +201,13 @@ done< <(\pacman -Qqm 2> /dev/null)
 #--------------------#{{{
 _resoult_(){
 local _COUNT_=0
-_LIST_PKG_=()
 
 while read -ra LINE ; do
 	_LIST_PKG_+=( "${LINE[0]}" ) # create list of packages
 	((_COUNT_++)) # create menu count
 
 	# create menu items
-	[ "$_BAUR_SEARCH_" ] || printf "%0.2d: " $_COUNT_
+	[ "$_BAUR_SEARCH_" ] || printf "%2d: " $_COUNT_
     echo -e "${Blue}Aur${Reset}/${LINE[0]} ${Yellow}${LINE[1]} ${Cyan}(${LINE[2]} ${LINE[3]}) $(_check_pkg_ ${LINE[0]}) ${Reset}"
 	echo -e "${LINE[@]:4}\n"
 done < "$_CACHE_SEARCH_"
