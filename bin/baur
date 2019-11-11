@@ -3,7 +3,6 @@
 #-------#
 # NOTES #
 #-------#
-# remove package : sudo pacman -Rsn
 
 #----------#
 # PACKAGES #
@@ -38,7 +37,7 @@ _em_(){ (>&2 echo -e "${_name_^}: $@") && exit 1 ;}
 #------------#
 # JUST A MSG #
 #------------#{{{
-_msg_(){ echo -e "${_name_^} : $@" ;}
+_msg_(){ echo -e "${_name_^}: $@" ;}
 #}}}
 
 #--------#
@@ -117,16 +116,11 @@ echo -en "Searching Online ... \r"
 if \curl -s "https://aur.archlinux.org/packages/${_PAGE_:-${_link_}}" -o "$_CACHE_SOURCE_"; then
 	_list_
     [ "$_BAUR_SEARCH_" ] && {
-        while true ; do
+        while [ "$_PAGE_" ]; do
             _PAGE_=$(awk -F '"' '/^[[:space:]]*<div class="pkglist-stats">/,/<\/div>/{if($0 ~ "Next"){print $4}}' $_CACHE_SOURCE_)
             _PAGE_=${_PAGE_##*/}
-
-            [ "$_PAGE_" ] && {
-                \curl -s "https://aur.archlinux.org/packages/${_PAGE_}" -o "$_CACHE_SOURCE_"
-                _list_
-            } || {
-                break
-            }
+            \curl -s "https://aur.archlinux.org/packages/${_PAGE_}" -o "$_CACHE_SOURCE_"
+            _list_
         done
     }
 else
@@ -279,7 +273,8 @@ for i in ${_SELECT_[@]} ; do
 		local _PKG_=$i
 	} || {
         # if u user the menu get the name from list
-		i=$(($i - 1)) local _PKG_=${_LIST_PKG_[$i]}
+		i=$(($i - 1))
+        local _PKG_=${_LIST_PKG_[$i]}
 	}
 
 	# just simple msg
@@ -323,6 +318,14 @@ for i in ${_SELECT_[@]} ; do
 		_em_ "Fisrt of all, do You Have Network?"
 	fi
 done
+}
+#}}}
+
+#-----------------#
+# REMOVE PACKAGES #
+#-----------------#{{{
+_remove_(){
+    \sudo \pacman -Rsn ${_BAUR_REMOVE_[@]}
 }
 #}}}
 
@@ -381,7 +384,8 @@ AUR Package Manager in Bure Bash
 usage : ${_name_} [OPTION]... [PACKAGE]...
 
 [OPTION] Only short option for now
- -S PKG     Install target PKG (just one PKG at a time)
+ -S PKG     Install target PKG
+ -R PKG     Remove target PKG
  -s PKG     Search for package by matching PKG
  -i PKG     Show information for PKG
  -d PKG     Download PKGBUILD of PKG, nothing else
@@ -415,11 +419,12 @@ exit 0
 # MAIN FUNCTION #
 #---------------#{{{
 _main_(){
-while getopts ":S:s:i:d:b:cekh" OPT ; do
+while getopts ":S:R:s:i:d:b:cekh" OPT ; do
 	case "$OPT" in
 		S ) # --install
             _BAUR_INSTALL_=( "$OPTARG" )
 			_BAUR_LIST_=true
+            ((_BAUR_MA_++))
 
             #Multi package
             until [[ $(eval "echo \${$OPTIND}") =~ ^-.* ]] || [ -z $(eval "echo \${$OPTIND}") ]; do
@@ -427,17 +432,31 @@ while getopts ":S:s:i:d:b:cekh" OPT ; do
                 OPTIND=$((OPTIND + 1))
             done
 			;;
+        R ) # --remove
+            _BAUR_REMOVE_=( "$OPTARG" )
+			_BAUR_LIST_=true
+            ((_BAUR_MA_++))
+
+            #Multi package
+            until [[ $(eval "echo \${$OPTIND}") =~ ^-.* ]] || [ -z $(eval "echo \${$OPTIND}") ]; do
+                _BAUR_REMOVE_+=($(eval "echo \${$OPTIND}"))
+                OPTIND=$((OPTIND + 1))
+            done
+            ;;
 		s ) # --search
 			_BAUR_SEARCH_="$OPTARG"
 			_BAUR_LIST_=true
+            ((_BAUR_MA_++))
 			;;
         i ) # --info
 			_BAUR_INFO_="$OPTARG"
 			_BAUR_LIST_=true
+            ((_BAUR_MA_++))
             ;;
 		d ) # --Download
             _BAUR_DOWNLOAD_=( "$OPTARG" )
 			_BAUR_LIST_=true
+            ((_BAUR_MA_++))
 
             #Multi package
              until [[ $(eval "echo \${$OPTIND}") =~ ^-.* ]] || [ -z $(eval "echo \${$OPTIND}") ]; do
@@ -481,32 +500,29 @@ _main_ "$@"
 #----------------------#
 # RUN SELECTED OPTIONS #
 #----------------------#{{{
+[ "$_BAUR_INSTALL_" ] && {
+    (( _BAUR_MA_ = 1 )) || _em_ "I have only Two Hands can't do many jobs at once (-d,-S,-s,-i,-R)"
+	_pkgbuild_ "${_BAUR_INSTALL_[@]}"
+}
+
+[ "$_BAUR_REMOVE_" ] && {
+    (( _BAUR_MA_ = 1 )) || _em_ "I have only Two Hands can't do many jobs at once (-d,-S,-s,-i,-R)"
+    _remove_ "${_BAUR_REMOVE_[@]}"
+}
+
 [ "$_BAUR_SEARCH_" ] && {
-	[ "$_BAUR_INSTALL_" ] || [ "$_BAUR_DOWNLOAD_" ] || [ "$_BAUR_INFO_" ] && {
-		_em_ "I have only Two Hands can't do many jobs at once (-d,-S,-s,-i)"
-	}
+    (( _BAUR_MA_ = 1 )) || _em_ "I have only Two Hands can't do many jobs at once (-d,-S,-s,-i,-R)"
 	_source_ "$_BAUR_SEARCH_"
 	_resoult_
 }
 
-[ "$_BAUR_INSTALL_" ] && {
-	[ "$_BAUR_SEARCH_" ] || [ "$_BAUR_DOWNLOAD_" ] || [ "$_BAUR_INFO_" ] && {
-		_em_ "I have only Two Hands can't do many jobs at once (-d,-S,-s,-i)"
-	}
-	_pkgbuild_ "${_BAUR_INSTALL_[@]}"
-}
-
 [ "$_BAUR_DOWNLOAD_" ] && {
-	[ "$_BAUR_INSTALL_" ] || [ "$_BAUR_SEARCH_" ] || [ "$_BAUR_INFO_" ] && {
-		_em_ "I have only Two Hands can't do many jobs at once (-d,-S,-s,-i)"
-	}
+    (( _BAUR_MA_ = 1 )) || _em_ "I have only Two Hands can't do many jobs at once (-d,-S,-s,-i,-R)"
 	_pkgbuild_ "${_BAUR_DOWNLOAD_[@]}"
 }
 
 [ "$_BAUR_INFO_" ] && {
-	[ "$_BAUR_INSTALL_" ] || [ "$_BAUR_SEARCH_" ] || [ "$_BAUR_DOWNLOAD_" ] && {
-		_em_ "I have only Two Hands can't do many jobs at once (-d,-S,-s,-i)"
-	}
+    (( _BAUR_MA_ = 1 )) || _em_ "I have only Two Hands can't do many jobs at once (-d,-S,-s,-i,-R)"
 	_info_ "$_BAUR_INFO_"
 }
 
