@@ -200,6 +200,7 @@ done< <(\pacman -Qqm 2> /dev/null)
 #--------------------#{{{
 _resoult_(){
 local _COUNT_=0
+_LIST_PKG_=()
 
 while read -ra LINE ; do
 	_LIST_PKG_+=( "${LINE[0]}" ) # create list of packages
@@ -248,10 +249,12 @@ while true; do
 	# check for multi choice
 	for i in ${_SELECT_} ; do
 
-		[ "$i" -eq "$i" ] 2> /dev/null || continue 	# if the input is not a number loop the resoult
+        (( i = i )) 2> /dev/null || continue 	# if the input is not a number loop the resoult
 
-		# check if set the correct choices
-		(( i <= 0 || i > _COUNT_ )) 2> /dev/null && continue || break
+        (( i <= 0 || i > _COUNT_ )) && continue || break
+#
+#		# check if set the correct choices
+#		(( i <= 0 || i > _COUNT_ )) 2> /dev/null && continue || break
 	done
 
 done
@@ -529,6 +532,5 @@ _main_ "$@"
 [ "$_BAUR_LIST_" ] || {
 	_source_ "$_PKG_"
 	_selection_
-    _pkgbuild_
 }
 #}}}
