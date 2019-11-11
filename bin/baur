@@ -246,13 +246,14 @@ while true; do
     esac
 
     for i in ${_SELECT_} ; do
-        (( i = i )) || _em_ "What this ($i) Lettre doing in the Selection ??"
+        (( i = i )) || _em_ "What a Lettre doing in the Selection ??"
 
         (( i <= 0 || i > _COUNT_ )) || _em_ "Just like McDonald's, Pick what's in the menu"
+
+        _BAUR_SELECT_=true
     done
 
-    _BAUR_SELECT_=true
-    break
+    [ "$_BAUR_SELECT_" ] && break
 done
 }
 #}}}
@@ -267,15 +268,6 @@ _SELECT_=( ${_SELECT_:-${@}} )
 
 # create loop for pkgs
 for i in ${_SELECT_[@]} ; do
-#	# if you use -d just get the name direct
-#	[ "$_BAUR_SELECT_" ] || {
-#		local _PKG_=$i
-#	} && {
-#        # if u user the menu get the name from list
-#		i=$(($i - 1))
-#        local _PKG_=${_LIST_PKG_[$i]}
-#	}
-
     [ "$_BAUR_SELECT_" ] && {
         i=$((i - 1))
         local _PKG_="${_LIST_PKG_[$i]}"
@@ -313,10 +305,18 @@ for i in ${_SELECT_[@]} ; do
 		[ "$_BAUR_EDIT_" ] && eval "${EDITOR:-vim} PKGBUILD"
 
         # -c option
-        [ "$_BAUR_COMPILE_" ] && \makepkg -s || \makepkg -rsi
+        [ "$_BAUR_COMPILE_" ] && {
+            \makepkg -s
+            \cp "$_CACHE_DOWNLOAD_/$_PKG_" "$PWD"
+        } || {
+            \makepkg -frsi
+        }
 
 		# back where we were
 		\cd "$OLDPWD"
+
+        # remove cache
+        \rm -rf "$_CACHE_DOWNLOAD_/$_PKG_"
 
         # copy compile file to download
         [ "$_BAUR_COMPILE_" ] && { \cp -Rf "$_CACHE_DOWNLOAD_/$_PKG_" "$PWD" && _msg_ "$_PKG_, you stay here ok!" ;}
@@ -372,12 +372,26 @@ if \curl -s "https://aur.archlinux.org/packages/$PKG" -o "$_CACHE_INFO_" ; then
             }
         }
     }'
-
 else
     _em_ "Fisrt of all, do You Have Network?"
 fi
 }
 #}}}
+
+#------------------#
+# CLEAN BAUR CACHE #
+#------------------#
+_clean_(){
+local Y_N
+    _msg_ "The Mide is here, Do you want to clean you cache ?!"
+    read -n1 -p "${Green}[Y/n]${Blue} --> ${Reset}" Y_N
+
+    case "$Y_N" in
+        [Y|y] )
+            \rm -rf "$_CACHE_"
+            ;;
+    esac
+}
 
 #----------#
 # HELP MSG #
@@ -396,8 +410,9 @@ usage : ${_name_} [OPTION]... [PACKAGE]...
  -i PKG     Show information for PKG
  -d PKG     Download PKGBUILD of PKG, nothing else
  -b SRC     Search By Criteria (give -b option before search STRING)
- -c         Compile PKGBUILD of PKG, nothing else
+ -m         Make/Compile PKGBUILD of PKG, nothing else
  -e         Edit PKGBUILD in installation mode
+ -c         Clean Baur Cache
  -h         Print help usage
 
 [SRC] for -b option
@@ -425,7 +440,7 @@ exit 0
 # MAIN FUNCTION #
 #---------------#{{{
 _main_(){
-while getopts ":S:R:s:i:d:b:cekh" OPT ; do
+while getopts ":S:R:s:i:d:b:mcekh" OPT ; do
 	case "$OPT" in
 		S ) # --install
             _BAUR_INSTALL_=( "$OPTARG" )
@@ -473,12 +488,16 @@ while getopts ":S:R:s:i:d:b:cekh" OPT ; do
         b )
             _BAUR_BY_="$OPTARG"
             ;;
-        c )
+        m )
             _BAUR_COMPILE_=true
             ;;
 		e ) # --edit
 			_BAUR_EDIT_=true
 			;;
+        c )
+            _BAUR_CLEAN_=true
+            _BAUR_LIST_=true
+            ;;
 		h ) # --help
 			_help_dialog_
 			;;
@@ -512,6 +531,8 @@ _main_ "$@"
 [ "$_BAUR_DOWNLOAD_" ] && _pkgbuild_ "${_BAUR_DOWNLOAD_[@]}"
 
 [ "$_BAUR_INFO_" ] && _info_ "$_BAUR_INFO_"
+
+[ "$_BAUR_CLEAN_" ] && _clean_
 
 [ "$_BAUR_LIST_" ] || {
 	_source_ "$@"
