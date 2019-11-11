@@ -304,7 +304,7 @@ for i in ${_SELECT_[@]} ; do
         [ "$_BAUR_DOWNLOAD_" ] && { _msg_ "$_PKG_ Just stay here, don't do anything"; continue ;}
 
         # unpack the package
-        \tar xf "$_CACHE_DOWNLOAD_/$_PKG_.tar.gz"
+        \tar xf "$_CACHE_DOWNLOAD_/$_PKG_.tar.gz" -C "$_CACHE_DOWNLOAD_"
 
 		# go to pkg dir
 		\cd "$_CACHE_DOWNLOAD_/$_PKG_"
