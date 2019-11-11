@@ -26,7 +26,6 @@ _name_=${0##*/}
 #----------------#{{{
 _CACHE_="$HOME/.cache/BAUR"
 [ -d "$_CACHE_" ] || \mkdir -p "$_CACHE_"
-_LIST_PKG_=()
 #}}}
 
 #------------#
@@ -246,17 +245,14 @@ while true; do
             ;;
     esac
 
-	# check for multi choice
-	for i in ${_SELECT_} ; do
+    for i in ${_SELECT_} ; do
+        (( i = i )) || _em_ "What this ($i) Lettre doing in the Selection ??"
 
-        (( i = i )) 2> /dev/null || continue 	# if the input is not a number loop the resoult
+        (( i <= 0 || i > _COUNT_ )) && _em_ "Just like McDonald's, Pick what's in the menu"
+    done
 
-        (( i <= 0 || i > _COUNT_ )) && continue || break
-#
-#		# check if set the correct choices
-#		(( i <= 0 || i > _COUNT_ )) 2> /dev/null && continue || break
-	done
-
+    _BAUR_SELECT_=true
+    break
 done
 }
 #}}}
@@ -272,9 +268,9 @@ _SELECT_=( ${_SELECT_:-${@}} )
 # create loop for pkgs
 for i in ${_SELECT_[@]} ; do
 	# if you use -d just get the name direct
-	[ "$_BAUR_DOWNLOAD_" ] && {
+	[ "$_BAUR_SELECT_" ] || {
 		local _PKG_=$i
-	} || {
+	} && {
         # if u user the menu get the name from list
 		i=$(($i - 1))
         _PKG_=${_LIST_PKG_[$i]}
