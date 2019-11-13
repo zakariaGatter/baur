@@ -53,6 +53,7 @@ Yellow=$(tput setaf 3)  # Yellow
 Purple=$(tput setaf 5)  # Purple
   Cyan=$(tput setaf 6)  # Cyan
  White=$(tput setaf 7)  # White
+  Bold=$(tput bold)     # Bold
 #}}}
 
 #------------------------------------#
@@ -97,7 +98,7 @@ _packages_(){
 #--------------------------#{{{
 _source_(){
 #if no package giving
-[ -z "$1" ] && [ -z "$_PAGE_" ] && _em_ "You give me nothing to looking for "
+[ -z "$1" ] && [ -z "$_PAGE_" ] && _em_ "You give me nothing to look for "
 
 # get package name
 local _pkg_=${1}
@@ -190,7 +191,7 @@ local Q
 
 # just check if the package already installed
 while read -r Q; do
-	[ "$Q" = "$_PKG_" ] && echo -e "${Green}(Installed)${Reset}"
+	[ "$Q" = "$_PKG_" ] && echo -e "${Green}[Installed]${Reset}"
 done< <(\pacman -Qqm 2> /dev/null)
 }
 #}}}
@@ -207,8 +208,8 @@ while read -ra LINE ; do
 
 	# create menu items
 	[ "$_BAUR_SEARCH_" ] || printf "%2d: " $_COUNT_
-    echo -e "${Blue}Aur${Reset}/${LINE[0]} ${Yellow}${LINE[1]} ${Cyan}(${LINE[2]} ${LINE[3]}) $(_check_pkg_ ${LINE[0]}) ${Reset}"
-	echo -e "${LINE[@]:4}\n"
+    echo -e "${Bold}${Blue}Aur${White}/${LINE[0]} ${Yellow}${LINE[1]} ${Cyan}(${LINE[2]} ${LINE[3]}) $(_check_pkg_ ${LINE[0]}) ${Reset}"
+	echo -e "    ${LINE[@]:4}"
 done < "$_CACHE_SEARCH_"
 
 [ "$_BAUR_SEARCH_" ] || echo -e "${Blue}-->${Reset} $(_packages_) ${Yellow}[N/p] page${Reset}"
@@ -227,9 +228,9 @@ while true; do
     read _SELECT_
 
 	# check for quit option
-	[[ "$_SELECT_" =~ (Q|q) ]] && break
+	[[ "$_SELECT_" =~ (q|Q) ]] && exit 0
 	# if you press enter
-	[ "$_SELECT_" ] || break
+	[ "$_SELECT_" ] || exit 0
 
     # next and prav page
     case "$_SELECT_" in
@@ -237,11 +238,13 @@ while true; do
             _PAGE_=$(\awk -F '"' '/^[[:space:]]*<div class="pkglist-stats">/,/<\/div>/{if($0 ~ "Next"){print $4}}' $_CACHE_SOURCE_)
             _PAGE_=${_PAGE_##*/}
             [ "$_PAGE_" ] && _source_
+            continue
             ;;
         [Pp] )
             _PAGE_=$(\awk -F '"' '/^[[:space:]]*<div class="pkglist-stats">/,/<\/div>/{if($0 ~ "Previous"){print $4}}' $_CACHE_SOURCE_)
             _PAGE_=${_PAGE_##*/}
             [ "$_PAGE_" ] && _source_
+            continue
             ;;
     esac
 
@@ -327,6 +330,39 @@ done
 }
 #}}}
 
+#package update
+_update_(){
+_CACHE_UPDATE_="$_CACHE_/update"
+local up _pkg_version_
+while read -ra up ; do
+	local _pkg_=${up[0]}
+	local _version_=${up[1]}
+
+    echo -en "${_name_^}: Check for Packages Update \nThis may take sometime ... \r"
+    if (\curl -s "https://aur.archlinux.org/cgit/aur.git/plain/PKGBUILD?h=$_pkg_" -o "$_CACHE_UPDATE_"); then
+        read -r _pkg_version_ < <(\awk -F = '{if($1 == "pkgver"){ver=$2}; if($1 == "pkgrel"){rel=$2}}END{ printf "%s-%s\n", ver, rel}' "$_CACHE_UPDATE_")
+
+        [ "$_version_" != "$_pkg_version_" ] && {
+            _update_list_+=( "$_pkg_" )
+        }
+    else
+	    _em_ "Fisrt of all, do You Have Network?"
+    fi
+
+    [ "${_update_list_[*]}" ] && {
+        _msg_ "There is (${#_update_list_[@]}) Rusty Packages here, do you want to Update them [Y/n]"
+        read -n1 Y_N
+
+        case "$Y_N" in
+            Y|y ) _pkgbuild_ "${_update_list_[@]}" ;;
+        esac
+    } || {
+        _msg_ "All is up to date"
+    }
+
+done < <(\pacman -Qm)
+}
+
 #-----------------#
 # REMOVE PACKAGES #
 #-----------------#{{{
@@ -406,6 +442,7 @@ usage : ${_name_} [OPTION]... [PACKAGE]...
 [OPTION] Only short option for now
  -S PKG     Install target PKG
  -R PKG     Remove target PKG
+ -u PKG     Update all AUR Packages or single PKG
  -s PKG     Search for package by matching PKG
  -i PKG     Show information for PKG
  -d PKG     Download PKGBUILD of PKG, nothing else
@@ -440,7 +477,7 @@ exit 0
 # MAIN FUNCTION #
 #---------------#{{{
 _main_(){
-while getopts ":S:R:s:i:d:b:mcekh" OPT ; do
+while getopts ":S:R:us:i:d:b:mcekh" OPT ; do
 	case "$OPT" in
 		S ) # --install
             _BAUR_INSTALL_=( "$OPTARG" )
@@ -469,6 +506,11 @@ while getopts ":S:R:s:i:d:b:mcekh" OPT ; do
 			_BAUR_LIST_=true
             ((_BAUR_MA_++))
 			;;
+        u )
+            _BAUR_UPDATE_=true
+			_BAUR_LIST_=true
+            ((_BAUR_MA_++))
+            ;;
         i ) # --info
 			_BAUR_INFO_="$OPTARG"
 			_BAUR_LIST_=true
@@ -502,7 +544,7 @@ while getopts ":S:R:s:i:d:b:mcekh" OPT ; do
 			_help_dialog_
 			;;
         : )
-            _em_ "You give me nothing to lokking for "
+            _em_ "You give me nothing to looking for "
             ;;
 		* ) # wrong option
 			_em_ "What is that (-$OPTARG)?. Did you Read Help dialog (-h)?"
@@ -527,6 +569,8 @@ _main_ "$@"
 [ "$_BAUR_INSTALL_" ] && _pkgbuild_ "${_BAUR_INSTALL_[@]}"
 
 [ "$_BAUR_REMOVE_" ] && _remove_ "${_BAUR_REMOVE_[@]}"
+
+[ "$_BAUR_UPDATE_" ] && _update_ "$@"
 
 [ "$_BAUR_DOWNLOAD_" ] && _pkgbuild_ "${_BAUR_DOWNLOAD_[@]}"
 
