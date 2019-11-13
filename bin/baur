@@ -330,7 +330,9 @@ done
 }
 #}}}
 
-#package update
+#----------------#
+# PACKAGE UPDATE #
+#----------------#{{{
 _update_(){
 _CACHE_UPDATE_="$_CACHE_/update"
 local up _pkg_version_
@@ -362,6 +364,7 @@ while read -ra up ; do
 
 done < <(\pacman -Qm)
 }
+#}}}
 
 #-----------------#
 # REMOVE PACKAGES #

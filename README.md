@@ -1,5 +1,5 @@
 # BAUR
-(Still in Development in you find any issues or bugs please report)
+(Still in Development if you find any issues or bugs please report)
 
 ## Table of Contents
 
