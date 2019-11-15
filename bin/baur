@@ -7,12 +7,12 @@
 #----------#
 # PACKAGES #
 #----------#
-# curl, recode, awk, grep, tar, makepkg, pacman, coreutils
+# curl, awk, grep, tar, makepkg, pacman, coreutils
 
 #-------#
 # DEBUG #
 #-------#{{{
-#set -xv
+set -x
 #}}}
 
 #------#
@@ -90,7 +90,6 @@ _list_(){
 [ "$_BAUR_SEARCH_" ] || :> "$_CACHE_SEARCH_"
 
 # get list of search result (try to find a way better then use awk)
-#\recode html < "$_CACHE_SOURCE_" |
 \awk '/<td><a href="\/packages\//{
 	gsub(/<[^>]*>/,"",$0)
 	gsub(/^[[:space:]]*/,"",$0)
@@ -128,7 +127,7 @@ _source_(){
 [ "$1" ] || [ "$_PAGE_" ] || _em_ "You give me nothing to look for "
 
 # get package name
-local _pkg_=${1}
+local _pkg_=${1// /+}
 
 # get search by string
 local _link_=$(_search_by_ "$_pkg_")
@@ -419,7 +418,6 @@ if \wget -q "https://aur.archlinux.org/packages/$PKG" -O "$_CACHE_INFO_" ; then
     ( \grep '404 - Page Not Found' "$_CACHE_INFO_" &> /dev/null ) && _em_ "$PKG ?!!. Did You type the name correct"
 
     # get information
-#    \recode html < "$_CACHE_INFO_" |
     _amp_ "$_CACHE_INFO_"
     \awk '/<table id="pkginfo">/,/<\/table>/ {
         if($2 == "class=\"keyword\""){
