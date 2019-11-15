@@ -70,15 +70,17 @@ Purple=$(tput setaf 5)  # Purple
 
 #--------------------------------#
 # CONVERT HTML AMP CHARS TO TEXT #
-#--------------------------------#
+#--------------------------------#{{{
 _amp_(){
-local _amp_char_=( "&quot;" "&amp;" "&#039;" )
-local _nor_char_=( '"' '&' "'" )
+local _amp_char_=( "&quot;" "&amp;" "&#039;" "&lt;" "&gt;" )
+local _nor_char_=( '"' '&' "'" '<' '>' )
+local _file_="$1"
 
-for i ${!_amp_char_[@]} ; do
-    echo ${_amp_char_[$i]} ${_nor_char_[$i]}
+for i in ${!_amp_char_[@]} ; do
+    sed -i "s/${_amp_char_[$i]}/\\${_nor_char_[$i]}/g" "$_file_"
 done
 }
+#}}}
 
 #------------------------------------#
 # GET LIST OF RESOULT IN NICE FORMAT #
@@ -88,7 +90,8 @@ _list_(){
 [ "$_BAUR_SEARCH_" ] || :> "$_CACHE_SEARCH_"
 
 # get list of search result (try to find a way better then use awk)
-\recode html < "$_CACHE_SOURCE_" | \awk '/<td><a href="\/packages\//{
+#\recode html < "$_CACHE_SOURCE_" |
+\awk '/<td><a href="\/packages\//{
 	gsub(/<[^>]*>/,"",$0)
 	gsub(/^[[:space:]]*/,"",$0)
 	printf "%s", $0
@@ -101,7 +104,7 @@ _list_(){
 	}
 
 	print ""
-}' > "$_CACHE_SEARCH_"
+}' "$_CACHE_SOURCE_" > "$_CACHE_SEARCH_"
 }
 #}}}
 
@@ -122,7 +125,7 @@ _packages_(){
 #--------------------------#{{{
 _source_(){
 #if no package giving
-[ "$1" ] || [ "$_PAGE_" ] && _em_ "You give me nothing to look for "
+[ "$1" ] || [ "$_PAGE_" ] || _em_ "You give me nothing to look for "
 
 # get package name
 local _pkg_=${1}
@@ -130,18 +133,24 @@ local _pkg_=${1}
 # get search by string
 local _link_=$(_search_by_ "$_pkg_")
 
+# get items per page
+[ "$_BAUR_PER_" ] && {
+    (( _BAUR_PER_ = _BAUR_PER_ )) 2> /dev/null && _per_="&PP=${_BAUR_PER_}" || _msg_ "Unvalide Number for -p Option"
+}
+
 # simple wait msg
 echo -en "Searching Online ... \r"
 
 # Download the source page
-if \curl -s "https://aur.archlinux.org/packages/${_PAGE_:=${_link_}}" -o "$_CACHE_SOURCE_"; then
+if \wget -q "https://aur.archlinux.org/packages/${_PAGE_:=${_link_}}${_per_}" -O "$_CACHE_SOURCE_"; then
+    _amp_ "$_CACHE_SOURCE_"
 	_list_
     [ "$_BAUR_SEARCH_" ] && {
         while [ "$_PAGE_" ]; do
             _PAGE_=$(awk -F '"' '/^[[:space:]]*<div class="pkglist-stats">/,/<\/div>/{if($0 ~ "Next"){print $4}}' $_CACHE_SOURCE_)
             _PAGE_=${_PAGE_##*/}
             _PAGE_=${_PAGE_/\;/\&}
-            \curl -s "https://aur.archlinux.org/packages/${_PAGE_}" -o "$_CACHE_SOURCE_"
+            \wget -q "https://aur.archlinux.org/packages/${_PAGE_}" -O "$_CACHE_SOURCE_"
             _list_
         done
     }
@@ -228,7 +237,7 @@ while read -ra LINE ; do
 	((_COUNT_++)) # create menu count
 
 	# create menu items
-	[ "$_BAUR_SEARCH_" ] || printf "%2d: " $_COUNT_
+	[ "$_BAUR_SEARCH_" ] || printf "%0.3d " $_COUNT_
     echo -e "${Bold}${Blue}Aur${White}/${LINE[0]} ${Yellow}${LINE[1]} ${Cyan}(${LINE[2]} ${LINE[3]}%) $(_check_pkg_ ${LINE[0]}) ${Reset}"
 	echo -e "    ${LINE[@]:4}"
 done < "$_CACHE_SEARCH_"
@@ -257,20 +266,20 @@ while true; do
     case "$_SELECT_" in
         [Nn] )
             _PAGE_=$(\awk -F '"' '/^[[:space:]]*<div class="pkglist-stats">/,/<\/div>/{if($0 ~ "Next"){print $4}}' $_CACHE_SOURCE_)
-            _PAGE_=${_PAGE_##*/} _PAGE_=${_PAGE_/\;/\&}
+            _PAGE_=${_PAGE_##*/} #_PAGE_=${_PAGE_/\;/\&}
             [ "$_PAGE_" ] && _source_
             continue
             ;;
         [Pp] )
             _PAGE_=$(\awk -F '"' '/^[[:space:]]*<div class="pkglist-stats">/,/<\/div>/{if($0 ~ "Previous"){print $4}}' $_CACHE_SOURCE_)
-            _PAGE_=${_PAGE_##*/} _PAGE_=${_PAGE_/\;/\&}
+            _PAGE_=${_PAGE_##*/} #_PAGE_=${_PAGE_/\;/\&}
             [ "$_PAGE_" ] && _source_
             continue
             ;;
     esac
 
     for i in ${_SELECT_} ; do
-        (( i = i )) || _em_ "What a Lettre doing in the Selection ??"
+        (( i = i )) 2> /dev/null || _em_ "What a Lettre doing in the Selection ??"
 
         (( i <= 0 || i > _COUNT_ )) || _em_ "Just like McDonald's, Pick what's in the menu"
 
@@ -306,7 +315,7 @@ for i in ${_SELECT_[@]} ; do
     [ -d "$_CACHE_DOWNLOAD_" ] || \mkdir -p "$_CACHE_DOWNLOAD_"
 
 	# download PKGBUILD file
-	if \curl -s "https://aur.archlinux.org/cgit/aur.git/snapshot/$_PKG_.tar.gz" -o "$_CACHE_DOWNLOAD_/$_PKG_.tar.gz" ; then
+	if \wget -q "https://aur.archlinux.org/cgit/aur.git/snapshot/$_PKG_.tar.gz" -O "$_CACHE_DOWNLOAD_/$_PKG_.tar.gz" ; then
         # check if the file is a zip or regular file
         local _type_=$(\file -Lb --mime-type "$_CACHE_DOWNLOAD_/$_PKG_.tar.gz")
 
@@ -363,7 +372,7 @@ while read -ra up ; do
 	local _version_=${up[1]}
 
     echo -en "${_name_^}: Check for Packages Update \nThis may take sometime ... \r"
-    if (\curl -s "https://aur.archlinux.org/cgit/aur.git/plain/PKGBUILD?h=$_pkg_" -o "$_CACHE_UPDATE_"); then
+    if (\wget -q "https://aur.archlinux.org/cgit/aur.git/plain/PKGBUILD?h=$_pkg_" -O "$_CACHE_UPDATE_"); then
         read -r _pkg_version_ < <(\awk -F = '{if($1 == "pkgver"){ver=$2}; if($1 == "pkgrel"){rel=$2}}END{ printf "%s-%s\n", ver, rel}' "$_CACHE_UPDATE_")
 
         [ "$_version_" != "$_pkg_version_" ] && _update_list_+=( "$_pkg_" )
@@ -405,12 +414,14 @@ local _CACHE_INFO_="$_CACHE_/info"
 echo -en "Download ${PKG} Info ...\r"
 
 # Download info web page
-if \curl -s "https://aur.archlinux.org/packages/$PKG" -o "$_CACHE_INFO_" ; then
+if \wget -q "https://aur.archlinux.org/packages/$PKG" -O "$_CACHE_INFO_" ; then
     # if no resoult found
     ( \grep '404 - Page Not Found' "$_CACHE_INFO_" &> /dev/null ) && _em_ "$PKG ?!!. Did You type the name correct"
 
     # get information
-    \recode html < "$_CACHE_INFO_" | \awk '/<table id="pkginfo">/,/<\/table>/ {
+#    \recode html < "$_CACHE_INFO_" |
+    _amp_ "$_CACHE_INFO_"
+    \awk '/<table id="pkginfo">/,/<\/table>/ {
         if($2 == "class=\"keyword\""){
             gsub(/<[^>]*>/,"",$0)
             printf "%s ", $0
@@ -430,7 +441,7 @@ if \curl -s "https://aur.archlinux.org/packages/$PKG" -o "$_CACHE_INFO_" ; then
                 printf "%s\n", $0
             }
         }
-    }'
+    }' "$_CACHE_INFO_"
 else
     _em_ "Fisrt of all, do You Have Network?"
 fi
@@ -465,10 +476,11 @@ usage : ${_name_} [OPTION]... [PACKAGE]...
  -S PKG     Install target PKG
  -R PKG     Remove target PKG
  -u PKG     Update all AUR Packages or single PKG
- -s PKG     Search for package by matching PKG
- -i PKG     Show information for PKG
  -d PKG     Download PKGBUILD of PKG, nothing else
+ -i PKG     Show information for PKG
+ -s PKG     Search for package by matching PKG
  -b SRC     Search By Criteria (give -b option before search STRING)
+ -p NUM     Number of Packages Per Page (50,100,250)
  -m         Make/Compile PKGBUILD of PKG, nothing else
  -e         Edit PKGBUILD in installation mode
  -k         Keep Complie folder in cache
@@ -487,6 +499,8 @@ usage : ${_name_} [OPTION]... [PACKAGE]...
  mc         Maintainer, Co-maintainer
  s          Submitter
 
+[VARIABLES] change script commands
+
 Note :
  if you choose (-d|-m) the package will be in you Current Directory
 
@@ -500,7 +514,7 @@ exit 0
 # MAIN FUNCTION #
 #---------------#{{{
 _main_(){
-while getopts ":S:R:us:i:d:b:mcekh" OPT ; do
+while getopts ":S:R:us:i:d:b:p:mcekh" OPT ; do
 	case "$OPT" in
 		S ) # --install
             _BAUR_INSTALL_=( "$OPTARG" )
@@ -553,6 +567,9 @@ while getopts ":S:R:us:i:d:b:mcekh" OPT ; do
         b ) # --by
             _BAUR_BY_="$OPTARG"
             ;;
+        p )
+            _BAUR_PER_="$OPTARG"
+            ;;
         m ) # --make
             _BAUR_COMPILE_=true
             ;;
@@ -577,7 +594,9 @@ while getopts ":S:R:us:i:d:b:mcekh" OPT ; do
 			;;
 	esac
 done
-shift $((OPTIND-1))
+shift "$((OPTIND-1))"
+
+_pkg_list_=( "$@" )
 }
 #}}}
 
@@ -590,27 +609,27 @@ _main_ "$@"
 #----------------------#
 # RUN SELECTED OPTIONS #
 #----------------------#{{{
-(( _BAUR_MA_ = 1 )) || _em_ "I have only Two Hands can't do many jobs at once (-d,-S,-s,-i,-R)"
+(( _BAUR_MA_ = 1 ))     || _em_ "I have only Two Hands can't do many jobs at once (-d,-S,-s,-i,-R)"
 
-[ "$_BAUR_INSTALL_" ] && _pkgbuild_ "${_BAUR_INSTALL_[@]}"
+[ "$_BAUR_INSTALL_" ]   && _pkgbuild_ "${_BAUR_INSTALL_[@]}"
 
-[ "$_BAUR_REMOVE_" ] && _remove_ "${_BAUR_REMOVE_[@]}"
+[ "$_BAUR_REMOVE_" ]    && _remove_ "${_BAUR_REMOVE_[@]}"
 
-[ "$_BAUR_UPDATE_" ] && _update_ "$@"
+[ "$_BAUR_UPDATE_" ]    && _update_ "${_pkg_list_[@]}"
 
-[ "$_BAUR_DOWNLOAD_" ] && _pkgbuild_ "${_BAUR_DOWNLOAD_[@]}"
+[ "$_BAUR_DOWNLOAD_" ]  && _pkgbuild_ "${_BAUR_DOWNLOAD_[@]}"
 
-[ "$_BAUR_INFO_" ] && _info_ "$_BAUR_INFO_"
+[ "$_BAUR_INFO_" ]      && _info_ "$_BAUR_INFO_"
 
-[ "$_BAUR_CLEAN_" ] && _clean_
+[ "$_BAUR_CLEAN_" ]     && _clean_
 
-[ "$_BAUR_LIST_" ] || {
-	_source_ "$@"
+[ "$_BAUR_LIST_" ]      || {
+	_source_ "${_pkg_list_[@]}"
 	_selection_
     _pkgbuild_
 }
 
-[ "$_BAUR_SEARCH_" ] && {
+[ "$_BAUR_SEARCH_" ]    && {
 	_source_ "$_BAUR_SEARCH_"
 	_resoult_
 }
