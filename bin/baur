@@ -500,6 +500,12 @@ usage : ${_name_} [OPTION]... [PACKAGE]...
  s          Submitter
 
 [VARIABLES] change script commands
+_BAUR_CACHE_        d
+_TAR_CMD_           s
+_TAR_FLG_           d
+_MAKEPKG_CMD_       f
+_MAKEPKG_INS_FLG_   h
+_MAKEPKG_COM_FLG_   h
 
 Note :
  if you choose (-d|-m) the package will be in you Current Directory
