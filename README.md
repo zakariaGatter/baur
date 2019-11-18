@@ -34,7 +34,6 @@
     Install requires :
     * [CoreUtils](https://www.gnu.org/software/coreutils)
     * [Curl](https://curl.haxx.se)
-    * [Recode](http://recode.progiciels-bpi.ca/)
     * [Mawk/Gawk](http://invisible-island.net/mawk/mawk.html)
     * [Grep](https://www.gnu.org/software/grep)
     * [Tar](https://www.gnu.org/software/tar)
@@ -42,7 +41,7 @@
     * [Makepkg](https://git.archlinux.org/pacman.git/tree/scripts/makepkg.sh.in)
     * [Pacman](https://www.archlinux.org/pacman/)
 
-    `Probably you just need curl, recode`
+    `Probably you just need base-devel`
 
 2. Set up [Baur] :
     ```bash
@@ -62,12 +61,15 @@ usage : baur [OPTION]... [PACKAGE]...
 [OPTION] Only short option for now
  -S PKG     Install target PKG
  -R PKG     Remove target PKG
- -s PKG     Search for package by matching PKG
- -i PKG     Show information for PKG
+ -u PKG     Update all AUR Packages or single PKG
  -d PKG     Download PKGBUILD of PKG, nothing else
+ -i PKG     Show information for PKG
+ -s PKG     Search for package by matching PKG
  -b SRC     Search By Criteria (give -b option before search STRING)
+ -p NUM     Number of Packages Per Page (50,100,250)
  -m         Make/Compile PKGBUILD of PKG, nothing else
  -e         Edit PKGBUILD in installation mode
+ -k         Keep Complie folder in cache
  -c         Clean Baur Cache
  -h         Print help usage
 
@@ -83,8 +85,16 @@ usage : baur [OPTION]... [PACKAGE]...
  mc         Maintainer, Co-maintainer
  s          Submitter
 
+[VARIABLES] change script commands
+_BAUR_CACHE_        Directory to use for Baur Cache ($HOME/.cache/baur)
+_TAR_CMD_           Tar command to use (tar)
+_TAR_FLG_           Pass arguments to Tar (xf)
+_MAKEPKG_CMD_       Makepkg command to use (makepkg)
+_MAKEPKG_INS_FLG_   Pass arguments to Makepkg install (-rsif)
+_MAKEPKG_COM_FLG_   Pass arguments to Makepkg Compile (-s)
+
 Note :
- if you choose (-d|-c) the package will be in you Current Directory
+ if you choose (-d|-m|-k) the package will be in you Current Directory
 ```
 
 [Baur]:https://github.com/zakariagatter/baur
