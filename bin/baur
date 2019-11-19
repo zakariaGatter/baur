@@ -21,27 +21,6 @@
 _name_=${0##*/}
 #}}}
 
-#------------------#
-# SCRIPT VARIABLES #
-#------------------#{{{
-BAUR_CACHE="$HOME/.cache/baur"
-_CACHE_="$BAUR_CACHE"
-_CACHE_SOURCE_="$_CACHE_/source"
-_CACHE_SEARCH_="$_CACHE_/search"
-TAR_CMD="tar"
-TAR_FLG="xf"
-MAKEPKG_CMD="makepkg"
-MAKEPKG_INS_FLG="-rfsi"
-MAKEPKG_COM_FLG="-s"
-BAUR_EDITOR="$EDITOR"
-#}}}
-
-#----------------#
-# CREATE TMP DIR #
-#----------------#{{{
-[ -d "$_CACHE_" ] || mkdir -p "$_CACHE_"
-#}}}
-
 #------------#
 # ERRRRR MSG #
 #------------#{{{
@@ -57,9 +36,9 @@ _msg_(){ echo -e "${_name_^}: $@" ;}
 #-----------#
 # ERROW MSG #
 #-----------#{{{
-g_er(){ echo -e "${Bold}${Green}==>${White} $@ ${Reset}" ;}
-b_er(){ echo -e "${Bold}  ${Blue}-->${White} $@ ${Reset}" ;}
-r_er(){ echo -e "${Bold}${Red} -->${White} $@ ${Reset}" && exit 1 ;}
+g_er(){ echo -e "${Bold}${Green}==>${Reset} $@ " ;}
+b_er(){ echo -e "${Bold}  ${Blue}-->${Reset} $@ " ;}
+r_er(){ echo -e "${Bold}${Red}==> ERROR:${Reset} $@ " && exit 1 ;}
 #}}}
 
 #--------#
@@ -143,7 +122,6 @@ g_er "Retrieving sources ..."
 local _pkg_=${1// /+}
 
 # get search by string
-b_er "Generate search link ..."
 local _link_=$(_search_by_ "$_pkg_")
 
 # get items per page
@@ -154,6 +132,7 @@ local _link_=$(_search_by_ "$_pkg_")
 
 # Download the source page
 if curl -s "https://aur.archlinux.org/packages/${_PAGE_:=${_link_}}${_per_}" -o "$_CACHE_SOURCE_"; then
+    b_er "Generate search link ..."
     _amp_ "$_CACHE_SOURCE_"
 	_list_
     [ "$_BAUR_SEARCH_" ] && {
@@ -289,7 +268,7 @@ while true; do
     for i in ${_SELECT_} ; do
         (( i = i )) 2> /dev/null || _em_ "What a Lettre doing in the Selection ??"
 
-        (( i <= 0 || i > _COUNT_ )) || _em_ "Just like McDonald's, Pick what's in the menu"
+        (( i <= 0 || i > _COUNT_ )) && _em_ "Just like McDonald's, Pick what's in the menu"
 
         _BAUR_SELECT_=true
     done
@@ -317,6 +296,7 @@ for i in ${_SELECT_[@]} ; do
     }
 
 	# just simple msg
+    g_er "Retrieving ${_PKG_} Snapshot."
 	b_er "Downloading ${_PKG_}.tar.gz ..."
 
     # check for _CACHE_DOWNLOAD_
@@ -345,8 +325,10 @@ for i in ${_SELECT_[@]} ; do
 		cd "$_CACHE_DOWNLOAD_/$_PKG_"
 
 		# if u use -e edit PKGBUILD
-        g_er "Edit PKGBUILD file ..."
-		[ "$_BAUR_EDIT_" ] && eval "${BAUR_EDITOR} PKGBUILD"
+		[ "$_BAUR_EDIT_" ] && {
+            eval "${BAUR_EDITOR} PKGBUILD"
+            g_er "Edit PKGBUILD file ..."
+        }
 
         # -c option
         [ "$_BAUR_COMPILE_" ] && {
@@ -354,8 +336,7 @@ for i in ${_SELECT_[@]} ; do
             ${MAKEPKG_CMD} ${MAKEPKG_COM_FLG}
             cp "$_CACHE_DOWNLOAD_/$_PKG_" "$PWD"
         } || {
-            g_er "Compile $_PKG_ Package ..."
-            g_er "Install $_PKG_ Package ..."
+            g_er "Compile/Install $_PKG_ Package ..."
             ${MAKEPKG_CMD} ${MAKEPKG_INS_FLG}
         }
 
@@ -363,7 +344,7 @@ for i in ${_SELECT_[@]} ; do
 		cd "$OLDPWD"
 
         # remove cache
-        [ "$_BAUR_KEEP_" ] || rm -rf "$_CACHE_DOWNLOAD_/$_PKG_" && b_er "Keep $_PKG_ in cache ..."
+        [ "$_BAUR_KEEP_" ] && b_er "Keep $_PKG_ in cache ..." || rm -rf "$_CACHE_DOWNLOAD_/$_PKG_"
 
         # copy compile file to download
         [ "$_BAUR_COMPILE_" ] && { cp -Rf "$_CACHE_DOWNLOAD_/$_PKG_" "$PWD" && b_er "Move $_PKG_ in current Directory" ;}
@@ -625,6 +606,27 @@ _pkg_list_=( "$@" )
 # EXEC MAIN FUNCTION #
 #--------------------#{{{
 _main_ "$@"
+#}}}
+
+#------------------#
+# SCRIPT VARIABLES #
+#------------------#{{{
+BAUR_CACHE="$HOME/.cache/baur"
+_CACHE_="$BAUR_CACHE"
+_CACHE_SOURCE_="$_CACHE_/source"
+_CACHE_SEARCH_="$_CACHE_/search"
+TAR_CMD="tar"
+TAR_FLG="xf"
+MAKEPKG_CMD="makepkg"
+MAKEPKG_INS_FLG="-rfsi"
+MAKEPKG_COM_FLG="-s"
+BAUR_EDITOR="$EDITOR"
+#}}}
+
+#----------------#
+# CREATE TMP DIR #
+#----------------#{{{
+[ -d "$_CACHE_" ] || mkdir -p "$_CACHE_"
 #}}}
 
 #----------------------#
