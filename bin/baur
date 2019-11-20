@@ -36,8 +36,8 @@ _msg_(){ echo -e "${_name_^}: $@" ;}
 #-----------#
 # ERROW MSG #
 #-----------#{{{
-g_er(){ echo -e "${Bold}${Green}==>${Reset} $@ " ;}
-b_er(){ echo -e "${Bold}  ${Blue}-->${Reset} $@ " ;}
+g_er(){ echo -e "${Bold}${Green}==>${Reset} $@ " ${Reset};}
+b_er(){ echo -e "${Bold}  ${Blue}-->${Reset} $@ ${Reset}" ;}
 r_er(){ echo -e "${Bold}${Red}==> ERROR:${Reset} $@ " && exit 1 ;}
 #}}}
 
@@ -360,17 +360,17 @@ done
 #----------------#{{{
 _update_(){
 local _CACHE_UPDATE_="$_CACHE_/update"
-local up _pkg_version_ Y_N
+local up _pkg_version_
 
 g_er "Check for Packages Update"
-while read -ra up ; do
+while read -u3 -ra up ; do
 	local _pkg_=${up[0]}
 	local _version_=${up[1]}
 
+    b_er "check for $_pkg_ New version ..."
     if (curl -s "https://aur.archlinux.org/cgit/aur.git/plain/PKGBUILD?h=$_pkg_" -o "$_CACHE_UPDATE_"); then
         read -r _pkg_version_ < <(awk -F = '{if($1 == "pkgver"){ver=$2}; if($1 == "pkgrel"){rel=$2}}END{ printf "%s-%s\n", ver, rel}' "$_CACHE_UPDATE_")
 
-        b_er "check for $_pkg_ New version ..."
         [ "$_version_" != "$_pkg_version_" ] && _update_list_+=( "$_pkg_" )
     else
 	    _em_ "Fisrt of all, do You Have Network?"
@@ -378,16 +378,16 @@ while read -ra up ; do
 
     [ "${_update_list_[*]}" ] && {
         g_er "There is (${#_update_list_[@]}) Rusty Packages here, do you want to Update them ${Blue}[Y/n]"
-        read -p "${Blue}${Bold}  --> ${Reset}" -n1 Y_N
+        read -N1 -p "${Blue}${Bold}  --> ${Reset}" Y_N
 
         case "$Y_N" in
             Y|y ) _pkgbuild_ "${_update_list_[@]}" ;;
         esac
-    } || {
+    }||{
         g_er "All is up to date"
     }
 
-done < <(pacman -Qm)
+done 3< <(pacman -Qm $_pkg_)
 }
 #}}}
 
@@ -448,8 +448,8 @@ fi
 #------------------#{{{
 _clean_(){
 local Y_N
-    g_er "The Mide is here, Do you want to clean you cache ?!"
-    read -n1 -p "${Green}[Y/n]${Blue} --> ${Reset}" Y_N
+    g_er "The Mide is here, Do you want to clean you cache ?!${Green}[Y/n]"
+    read -N1 -p "${Blue} --> ${Reset}" Y_N
 
     case "$Y_N" in
         [Y|y] ) rm -rf "$_CACHE_" ;;
@@ -470,7 +470,7 @@ usage : ${_name_} [OPTION]... [PACKAGE]...
 [OPTION] Only short option for now
  -S PKG     Install target PKG
  -R PKG     Remove target PKG
- -u PKG     Update all AUR Packages or single PKG
+ -u PKG     Update all AUR Packages
  -d PKG     Download PKGBUILD of PKG, nothing else
  -i PKG     Show information for PKG
  -s PKG     Search for package by matching PKG
@@ -633,25 +633,17 @@ BAUR_EDITOR="$EDITOR"
 # RUN SELECTED OPTIONS #
 #----------------------#{{{
 (( _BAUR_MA_ = 1 ))     || _em_ "I have only Two Hands can't do many jobs at once (-d,-S,-s,-i,-R)"
-
 [ "$_BAUR_INSTALL_" ]   && _pkgbuild_ "${_BAUR_INSTALL_[@]}" || true
-
 [ "$_BAUR_REMOVE_" ]    && _remove_ "${_BAUR_REMOVE_[@]}" || true
-
 [ "$_BAUR_UPDATE_" ]    && _update_ "${_pkg_list_[@]}" || true
-
 [ "$_BAUR_DOWNLOAD_" ]  && _pkgbuild_ "${_BAUR_DOWNLOAD_[@]}" || true
-
 [ "$_BAUR_INFO_" ]      && _info_ "$_BAUR_INFO_" || true
-
 [ "$_BAUR_CLEAN_" ]     && _clean_ || true
-
 [ "$_BAUR_LIST_" ]      && true || {
 	_source_ "${_pkg_list_[@]}"
 	_selection_
     _pkgbuild_
 }
-
 [ "$_BAUR_SEARCH_" ]    && {
 	_source_ "$_BAUR_SEARCH_"
 	_resoult_
