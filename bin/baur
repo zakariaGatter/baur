@@ -631,19 +631,12 @@ _main_ "$@"
 # RUN SELECTED OPTIONS #
 #----------------------#{{{
 (( _BAUR_MA_ = 1 ))     || _em_ "I have only Two Hands can't do many jobs at once (-d,-S,-s,-i,-R)"
-
 [ "$_BAUR_INSTALL_" ]   && _pkgbuild_ "${_BAUR_INSTALL_[@]}" || true
-
 [ "$_BAUR_REMOVE_" ]    && _remove_ "${_BAUR_REMOVE_[@]}" || true
-
 [ "$_BAUR_UPDATE_" ]    && _update_ "${_pkg_list_[@]}" || true
-
 [ "$_BAUR_DOWNLOAD_" ]  && _pkgbuild_ "${_BAUR_DOWNLOAD_[@]}" || true
-
 [ "$_BAUR_INFO_" ]      && _info_ "$_BAUR_INFO_" || true
-
 [ "$_BAUR_CLEAN_" ]     && _clean_ || true
-
 [ "$_BAUR_LIST_" ]      && true || {
 	_source_ "${_pkg_list_[@]}"
 	_selection_
