@@ -470,7 +470,7 @@ usage : ${_name_} [OPTION]... [PACKAGE]...
 [OPTION] Only short option for now
  -S PKG     Install target PKG
  -R PKG     Remove target PKG
- -u PKG     Update all AUR Packages
+ -u         Update all AUR Packages
  -d PKG     Download PKGBUILD of PKG, nothing else
  -i PKG     Show information for PKG
  -s PKG     Search for package by matching PKG
@@ -478,7 +478,7 @@ usage : ${_name_} [OPTION]... [PACKAGE]...
  -p NUM     Number of Packages Per Page (50,100,250)
  -m         Make/Compile PKGBUILD of PKG, nothing else
  -e         Edit PKGBUILD in installation mode
- -k         Keep Complie folder in cache
+ -k         Keep Complie folder
  -c         Clean Baur Cache
  -h         Print help usage
 
