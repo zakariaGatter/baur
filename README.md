@@ -42,7 +42,7 @@
     * [Makepkg](https://git.archlinux.org/pacman.git/tree/scripts/makepkg.sh.in)
     * [Pacman](https://www.archlinux.org/pacman/)
 
-    `Probably you just need base-devel`
+    > Probably you just need base-devel
 
 2. Set up [Baur] :
     ```bash
@@ -98,5 +98,9 @@ BAUR_EDITOR       Editor to use when editing PKGBUILDs ($EDITOR)
 Note :
  if you choose (-d|-m|-k) the package will be in you Current Directory
 ```
+
+### Help Needed
+
+   >  Bash/Zsh completion for BAUR
 
 [Baur]:https://github.com/zakariagatter/baur
