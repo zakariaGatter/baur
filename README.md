@@ -15,6 +15,7 @@
 
 * Install AUR Packages
 * Remove AUR Packages
+* Update AUR Packages
 * Search for Package in the AUR
 * Search in the AUR by Criteria
 * Show Package Information
@@ -25,7 +26,7 @@
 [Baur] can automatically ...
 
 * Show Installed Packages in Search
-* Zsh and Bash completion
+* Zsh and Bash completion (Working on it)
 
 ## Quick Start
 
@@ -41,7 +42,7 @@
     * [Makepkg](https://git.archlinux.org/pacman.git/tree/scripts/makepkg.sh.in)
     * [Pacman](https://www.archlinux.org/pacman/)
 
-    `Probably you just need base-devel`
+    > Probably you just need base-devel
 
 2. Set up [Baur] :
     ```bash
@@ -61,7 +62,7 @@ usage : baur [OPTION]... [PACKAGE]...
 [OPTION] Only short option for now
  -S PKG     Install target PKG
  -R PKG     Remove target PKG
- -u PKG     Update all AUR Packages or single PKG
+ -u         Update all AUR Packages
  -d PKG     Download PKGBUILD of PKG, nothing else
  -i PKG     Show information for PKG
  -s PKG     Search for package by matching PKG
@@ -69,7 +70,7 @@ usage : baur [OPTION]... [PACKAGE]...
  -p NUM     Number of Packages Per Page (50,100,250)
  -m         Make/Compile PKGBUILD of PKG, nothing else
  -e         Edit PKGBUILD in installation mode
- -k         Keep Complie folder in cache
+ -k         Keep Complie folder
  -c         Clean Baur Cache
  -h         Print help usage
 
@@ -86,15 +87,20 @@ usage : baur [OPTION]... [PACKAGE]...
  s          Submitter
 
 [VARIABLES] change script commands
-_BAUR_CACHE_        Directory to use for Baur Cache ($HOME/.cache/baur)
-_TAR_CMD_           Tar command to use (tar)
-_TAR_FLG_           Pass arguments to Tar (xf)
-_MAKEPKG_CMD_       Makepkg command to use (makepkg)
-_MAKEPKG_INS_FLG_   Pass arguments to Makepkg install (-rsif)
-_MAKEPKG_COM_FLG_   Pass arguments to Makepkg Compile (-s)
+BAUR_CACHE        Directory to use for Baur Cache ($HOME/.cache/baur)
+TAR_CMD           Tar command to use (tar)
+TAR_FLG           Pass arguments to Tar (xf)
+MAKEPKG_CMD       Makepkg command to use (makepkg)
+MAKEPKG_INS_FLG   Pass arguments to Makepkg install (-rsif)
+MAKEPKG_COM_FLG   Pass arguments to Makepkg Compile (-s)
+BAUR_EDITOR       Editor to use when editing PKGBUILDs ($EDITOR)
 
 Note :
  if you choose (-d|-m|-k) the package will be in you Current Directory
 ```
+
+### Help Needed
+
+   >  Bash/Zsh completion for BAUR
 
 [Baur]:https://github.com/zakariagatter/baur

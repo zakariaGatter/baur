@@ -148,7 +148,7 @@ else
 fi
 
 # if the _CACHE_SEARCH_ file is empty that mean there is no result found
-[ "$(< "$_CACHE_SEARCH_")" ] || r_er "$_pkg_ ?!!. Did You type the name correct"
+[ "$(< $_CACHE_SEARCH_)" ] || r_er "$_pkg_ ?!!. Did You type the name correct"
 }
 #}}}
 
@@ -253,17 +253,13 @@ while true; do
     case "$_SELECT_" in
         [Nn] )
             _PAGE_=$(awk -F '"' '/^[[:space:]]*<div class="pkglist-stats">/,/<\/div>/{if($0 ~ "Next"){print $4}}' $_CACHE_SOURCE_)
-            _PAGE_=${_PAGE_##*/}
-            [ "$_PAGE_" ] && _source_
-            continue
             ;;
         [Pp] )
             _PAGE_=$(awk -F '"' '/^[[:space:]]*<div class="pkglist-stats">/,/<\/div>/{if($0 ~ "Previous"){print $4}}' $_CACHE_SOURCE_)
-            _PAGE_=${_PAGE_##*/}
-            [ "$_PAGE_" ] && _source_
-            continue
             ;;
     esac
+    _PAGE_=${_PAGE_##*/}
+    [ "$_PAGE_" ] && { _source_ ; continue; }
 
     for i in ${_SELECT_} ; do
         (( i = i )) 2> /dev/null || _em_ "What a Lettre doing in the Selection ??"
@@ -470,7 +466,7 @@ usage : ${_name_} [OPTION]... [PACKAGE]...
 [OPTION] Only short option for now
  -S PKG     Install target PKG
  -R PKG     Remove target PKG
- -u PKG     Update all AUR Packages
+ -u         Update all AUR Packages
  -d PKG     Download PKGBUILD of PKG, nothing else
  -i PKG     Show information for PKG
  -s PKG     Search for package by matching PKG
@@ -478,7 +474,7 @@ usage : ${_name_} [OPTION]... [PACKAGE]...
  -p NUM     Number of Packages Per Page (50,100,250)
  -m         Make/Compile PKGBUILD of PKG, nothing else
  -e         Edit PKGBUILD in installation mode
- -k         Keep Complie folder in cache
+ -k         Keep Complie folder
  -c         Clean Baur Cache
  -h         Print help usage
 
@@ -524,7 +520,7 @@ while getopts ":S:R:us:i:d:b:p:mcekh" OPT ; do
             ((_BAUR_MA_++))
 
             #Multi package
-            until [[ $(eval "echo \${$OPTIND}") =~ ^-.* ]] || [ -z $(eval "echo \${$OPTIND}") ]; do
+            until [[ $(eval "echo \${$OPTIND}") =~ ^-.* ]] || [ ! $(eval "echo \${$OPTIND}") ]; do
                 _BAUR_INSTALL_+=($(eval "echo \${$OPTIND}"))
                 OPTIND=$((OPTIND + 1))
             done
@@ -535,7 +531,7 @@ while getopts ":S:R:us:i:d:b:p:mcekh" OPT ; do
             ((_BAUR_MA_++))
 
             #Multi package
-            until [[ $(eval "echo \${$OPTIND}") =~ ^-.* ]] || [ -z $(eval "echo \${$OPTIND}") ]; do
+            until [[ $(eval "echo \${$OPTIND}") =~ ^-.* ]] || [ ! $(eval "echo \${$OPTIND}") ]; do
                 _BAUR_REMOVE_+=($(eval "echo \${$OPTIND}"))
                 OPTIND=$((OPTIND + 1))
             done
@@ -561,7 +557,7 @@ while getopts ":S:R:us:i:d:b:p:mcekh" OPT ; do
             ((_BAUR_MA_++))
 
             #Multi package
-             until [[ $(eval "echo \${$OPTIND}") =~ ^-.* ]] || [ -z $(eval "echo \${$OPTIND}") ]; do
+             until [[ $(eval "echo \${$OPTIND}") =~ ^-.* ]] || [ ! $(eval "echo \${$OPTIND}") ]; do
                 _BAUR_DOWNLOAD_+=($(eval "echo \${$OPTIND}"))
                 OPTIND=$((OPTIND + 1))
             done
