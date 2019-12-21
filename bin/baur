@@ -64,11 +64,7 @@ _amp_(){
 local _amp_char_=( "&quot;" "&amp;" "&#039;" "&lt;" "&gt;" )
 local _nor_char_=( '"' '&' "'" '<' '>' )
 local _file_="$1"
-
-for i in ${!_amp_char_[@]} ; do
-    sed -i "s/${_amp_char_[$i]}/\\${_nor_char_[$i]}/g" "$_file_"
-done
-}
+for i in ${!_amp_char_[@]} ;{ sed -i "s/${_amp_char_[$i]}/\\${_nor_char_[$i]}/g" "$_file_" ;}
 #}}}
 
 #------------------------------------#
@@ -127,7 +123,7 @@ local _link_=$(_search_by_ "$_pkg_")
 # get items per page
 [ "$_BAUR_PER_" ] && {
     b_er "Count Item List ..."
-    (( _BAUR_PER_ = _BAUR_PER_ )) 2> /dev/null && _per_="&PP=${_BAUR_PER_}" || _msg_ "Unvalide Number for -p Option"
+    (( _BAUR_PER_ )) 2> /dev/null && _per_="&PP=${_BAUR_PER_}" || _msg_ "Unvalide Number for -p Option"
 }
 
 # Download the source page
@@ -262,7 +258,7 @@ while true; do
     [ "$_PAGE_" ] && { _source_ ; continue; }
 
     for i in ${_SELECT_} ; do
-        (( i = i )) 2> /dev/null || _em_ "What a Lettre doing in the Selection ??"
+        (( i )) 2> /dev/null || _em_ "What a Lettre doing in the Selection ??"
 
         (( i <= 0 || i > _COUNT_ )) && _em_ "Just like McDonald's, Pick what's in the menu"
 
@@ -375,10 +371,7 @@ while read -u3 -ra up ; do
     [ "${_update_list_[*]}" ] && {
         g_er "There is (${#_update_list_[@]}) Rusty Packages here, do you want to Update them ${Blue}[Y/n]"
         read -N1 -p "${Blue}${Bold}  --> ${Reset}" Y_N
-
-        case "$Y_N" in
-            Y|y ) _pkgbuild_ "${_update_list_[@]}" ;;
-        esac
+        [[ "$Y_N" =~ [Y[y] ]] && _pkgbuild_ "${_update_list_[@]}"
     }||{
         g_er "All is up to date"
     }
@@ -443,13 +436,10 @@ fi
 # CLEAN BAUR CACHE #
 #------------------#{{{
 _clean_(){
-local Y_N
+    local Y_N
     g_er "The Mide is here, Do you want to clean you cache ?!${Green}[Y/n]"
     read -N1 -p "${Blue} --> ${Reset}" Y_N
-
-    case "$Y_N" in
-        [Y|y] ) rm -rf "$_CACHE_" ;;
-    esac
+    [[ "$Y_N" =~ [Y|y] ]] && rm -rf "$_CACHE_"
 }
 #}}}
 
@@ -503,7 +493,6 @@ Note :
  if you choose (-d|-m|-k) the package will be in you Current Directory
 
 HELP
-
 exit 0
 }
 #}}}
@@ -541,7 +530,7 @@ while getopts ":S:R:us:i:d:b:p:mcekh" OPT ; do
 			_BAUR_LIST_=true
             ((_BAUR_MA_++))
 			;;
-        u )
+        u ) # --update
             _BAUR_UPDATE_=true
 			_BAUR_LIST_=true
             ((_BAUR_MA_++))
@@ -565,7 +554,7 @@ while getopts ":S:R:us:i:d:b:p:mcekh" OPT ; do
         b ) # --by
             _BAUR_BY_="$OPTARG"
             ;;
-        p )
+        p ) # --per
             _BAUR_PER_="$OPTARG"
             ;;
         m ) # --make
@@ -584,7 +573,7 @@ while getopts ":S:R:us:i:d:b:p:mcekh" OPT ; do
 		h ) # --help
 			_help_dialog_
 			;;
-        : )
+        : ) # no arg giving
             _em_ "You give me nothing to looking for "
             ;;
 		* ) # wrong option
@@ -607,16 +596,16 @@ _main_ "$@"
 #------------------#
 # SCRIPT VARIABLES #
 #------------------#{{{
-BAUR_CACHE="$HOME/.cache/baur"
-_CACHE_="$BAUR_CACHE"
-_CACHE_SOURCE_="$_CACHE_/source"
-_CACHE_SEARCH_="$_CACHE_/search"
-TAR_CMD="tar"
-TAR_FLG="xf"
-MAKEPKG_CMD="makepkg"
-MAKEPKG_INS_FLG="-rfsi"
-MAKEPKG_COM_FLG="-s"
-BAUR_EDITOR="$EDITOR"
+     BAUR_CACHE=${BAUR_CACHE:-$HOME/.cache/baur}
+        TAR_CMD=${TAR_CMD:-tar}
+        TAR_FLG=${TAR_FLG:-xf}
+    MAKEPKG_CMD=${MAKEPKG_CMD:-makepkg}
+MAKEPKG_INS_FLG=${MAKEPKG_INS_FLG:--rfsi}
+MAKEPKG_COM_FLG=${MAKEPKG_COM_FLG:--s}
+    BAUR_EDITOR=${BAUR_EDITOR:-$EDITOR}
+        _CACHE_="$BAUR_CACHE"
+ _CACHE_SOURCE_="$_CACHE_/source"
+ _CACHE_SEARCH_="$_CACHE_/search"
 #}}}
 
 #----------------#
@@ -629,19 +618,12 @@ BAUR_EDITOR="$EDITOR"
 # RUN SELECTED OPTIONS #
 #----------------------#{{{
 (( _BAUR_MA_ = 1 ))     || _em_ "I have only Two Hands can't do many jobs at once (-d,-S,-s,-i,-R)"
-[ "$_BAUR_INSTALL_" ]   && _pkgbuild_ "${_BAUR_INSTALL_[@]}" || true
-[ "$_BAUR_REMOVE_" ]    && _remove_ "${_BAUR_REMOVE_[@]}" || true
-[ "$_BAUR_UPDATE_" ]    && _update_ "${_pkg_list_[@]}" || true
-[ "$_BAUR_DOWNLOAD_" ]  && _pkgbuild_ "${_BAUR_DOWNLOAD_[@]}" || true
-[ "$_BAUR_INFO_" ]      && _info_ "$_BAUR_INFO_" || true
-[ "$_BAUR_CLEAN_" ]     && _clean_ || true
-[ "$_BAUR_LIST_" ]      && true || {
-	_source_ "${_pkg_list_[@]}"
-	_selection_
-    _pkgbuild_
-}
-[ "$_BAUR_SEARCH_" ]    && {
-	_source_ "$_BAUR_SEARCH_"
-	_resoult_
-} || true
+[ "$_BAUR_INSTALL_" ]   && _pkgbuild_ "${_BAUR_INSTALL_[@]}"    || true
+[ "$_BAUR_REMOVE_" ]    && _remove_ "${_BAUR_REMOVE_[@]}"       || true
+[ "$_BAUR_UPDATE_" ]    && _update_ "${_pkg_list_[@]}"          || true
+[ "$_BAUR_DOWNLOAD_" ]  && _pkgbuild_ "${_BAUR_DOWNLOAD_[@]}"   || true
+[ "$_BAUR_INFO_" ]      && _info_ "$_BAUR_INFO_"                || true
+[ "$_BAUR_CLEAN_" ]     && _clean_                              || true
+[ "$_BAUR_LIST_" ]      && true || { _source_ "${_pkg_list_[@]}"; _selection_; _pkgbuild_ ;}
+[ "$_BAUR_SEARCH_" ]    && { _source_ "$_BAUR_SEARCH_"; _resoult_ ;} || true
 #}}}
