@@ -140,7 +140,7 @@ if curl -s "https://aur.archlinux.org/packages/${_PAGE_:=${_link_}}${_per_}" -o 
         done
     }
 else
-	_em_ "Fisrt of all, do You Have Network?"
+	_em_ "First of all, do You Have Network?"
 fi
 
 # if the _CACHE_SEARCH_ file is empty that mean there is no result found
@@ -341,7 +341,7 @@ for i in ${_SELECT_[@]} ; do
         # copy compile file to download
         [ "$_BAUR_COMPILE_" ] && { cp -Rf "$_CACHE_DOWNLOAD_/$_PKG_" "$PWD" && b_er "Move $_PKG_ in current Directory" ;}
 	else
-		_em_ "Fisrt of all, do You Have Network?"
+		_em_ "First of all, do You Have Network?"
 	fi
 done
 }
@@ -365,7 +365,7 @@ while read -u3 -ra up ; do
 
         [ "$_version_" != "$_pkg_version_" ] && _update_list_+=( "$_pkg_" )
     else
-	    _em_ "Fisrt of all, do You Have Network?"
+	    _em_ "First of all, do You Have Network?"
     fi
 
     [ "${_update_list_[*]}" ] && {
@@ -427,7 +427,7 @@ if curl -s "https://aur.archlinux.org/packages/$PKG" -o "$_CACHE_INFO_" ; then
         }
     }' "$_CACHE_INFO_"
 else
-    _em_ "Fisrt of all, do You Have Network?"
+    _em_ "First of all, do You Have Network?"
 fi
 }
 #}}}
