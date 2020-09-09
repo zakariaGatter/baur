@@ -12,33 +12,27 @@
 #-------#
 # DEBUG #
 #-------#{{{
-#set -x
+#set -xv
 #}}}
 
 #------#
 # NAME #
 #------#{{{
-_name_=${0##*/}
+name=${0##*/}
 #}}}
 
 #------------#
 # ERRRRR MSG #
 #------------#{{{
-_em_(){ (>&2 echo -e "${_name_^}: $@") && exit 1 ;}
-#}}}
-
-#------------#
-# JUST A MSG #
-#------------#{{{
-_msg_(){ echo -e "${_name_^}: $@" ;}
+die(){ >&2 printf "%s: %b \n" "${name^}" "$@" ; exit 2 ;}
 #}}}
 
 #-----------#
 # ERROW MSG #
 #-----------#{{{
-g_er(){ echo -e "${Bold}${Green}==>${Reset} $@ " ${Reset};}
+g_er(){ echo -e "${Bold}${Green}==>${Reset} $@ " ${Reset} ;}
 b_er(){ echo -e "${Bold}  ${Blue}-->${Reset} $@ ${Reset}" ;}
-r_er(){ echo -e "${Bold}${Red}==> ERROR:${Reset} $@ " && exit 1 ;}
+r_er(){ echo -e "${Bold}${Red}==> ERROR:${Reset} $@ " ; exit 1 ;}
 #}}}
 
 #--------#
@@ -65,6 +59,7 @@ local _amp_char_=( "&quot;" "&amp;" "&#039;" "&lt;" "&gt;" )
 local _nor_char_=( '"' '&' "'" '<' '>' )
 local _file_="$1"
 for i in ${!_amp_char_[@]} ;{ sed -i "s/${_amp_char_[$i]}/\\${_nor_char_[$i]}/g" "$_file_" ;}
+}
 #}}}
 
 #------------------------------------#
@@ -109,7 +104,7 @@ awk '/^[[:space:]]*<div class="pkglist-stats">/,/<\/div>/{
 #--------------------------#{{{
 _source_(){
 #if no package giving
-[ "$1" ] || [ "$_PAGE_" ] || r_er "Nothing to look for"
+[ "$1" ] || [ "$_PAGE_" ] || r_er "Empty box, what should i do with it"
 
 # simple wait msg
 g_er "Retrieving sources ..."
@@ -123,7 +118,7 @@ local _link_=$(_search_by_ "$_pkg_")
 # get items per page
 [ "$_BAUR_PER_" ] && {
     b_er "Count Item List ..."
-    (( _BAUR_PER_ )) 2> /dev/null && _per_="&PP=${_BAUR_PER_}" || _msg_ "Unvalide Number for -p Option"
+    (( _BAUR_PER_ )) 2> /dev/null && _per_="&PP=${_BAUR_PER_}" || r_er "Unvalide Number for -p Option"
 }
 
 # Download the source page
@@ -140,7 +135,7 @@ if curl -s "https://aur.archlinux.org/packages/${_PAGE_:=${_link_}}${_per_}" -o 
         done
     }
 else
-	_em_ "First of all, do You Have Network?"
+	die "First of all, do You Have Network?"
 fi
 
 # if the _CACHE_SEARCH_ file is empty that mean there is no result found
@@ -189,11 +184,11 @@ case "${_opt_^^}" in
         local _link="?O=0&SeB=s&K=${_pkg_}"
         ;;
     * )
-        r_er "No ${_opt_} search option "
+        r_er "Im lost, is that '$_opt_' what you looking for again ?!"
         ;;
 esac
 
-echo -e "$_link"
+[ "$_link" ] && printf "%s\n" "$_link"
 }
 #}}}
 
@@ -258,9 +253,9 @@ while true; do
     [ "$_PAGE_" ] && { _source_ ; continue; }
 
     for i in ${_SELECT_} ; do
-        (( i )) 2> /dev/null || _em_ "What a Lettre doing in the Selection ??"
+        (( i )) 2> /dev/null || die "What a Lettre doing in the Selection ??"
 
-        (( i <= 0 || i > _COUNT_ )) && _em_ "Just like McDonald's, Pick what's in the menu"
+        (( i <= 0 || i > _COUNT_ )) && die "Just like McDonald's, Pick what's in the menu"
 
         _BAUR_SELECT_=true
     done
@@ -311,7 +306,7 @@ for i in ${_SELECT_[@]} ; do
         g_er "Extracting Sources ..."
         b_er "Extracting $_PKG_.tar.gz"
         # unpack the package
-        ${TAR_CMD} ${TAR_FLG} "$_CACHE_DOWNLOAD_/$_PKG_.tar.gz" -C "$_CACHE_DOWNLOAD_"
+        eval "${TAR_CMD} ${TAR_FLG} $_CACHE_DOWNLOAD_/$_PKG_.tar.gz -C $_CACHE_DOWNLOAD_"
 
 		# go to pkg dir
 		cd "$_CACHE_DOWNLOAD_/$_PKG_"
@@ -325,11 +320,11 @@ for i in ${_SELECT_[@]} ; do
         # -c option
         [ "$_BAUR_COMPILE_" ] && {
             g_er "Compile $_PKG_ Package ..."
-            ${MAKEPKG_CMD} ${MAKEPKG_COM_FLG}
+            eval "${MAKEPKG_CMD} ${MAKEPKG_COM_FLG}"
             cp "$_CACHE_DOWNLOAD_/$_PKG_" "$PWD"
         } || {
             g_er "Compile/Install $_PKG_ Package ..."
-            ${MAKEPKG_CMD} ${MAKEPKG_INS_FLG}
+            eval "${MAKEPKG_CMD} ${MAKEPKG_INS_FLG}"
         }
 
 		# back where we were
@@ -341,7 +336,7 @@ for i in ${_SELECT_[@]} ; do
         # copy compile file to download
         [ "$_BAUR_COMPILE_" ] && { cp -Rf "$_CACHE_DOWNLOAD_/$_PKG_" "$PWD" && b_er "Move $_PKG_ in current Directory" ;}
 	else
-		_em_ "First of all, do You Have Network?"
+		die "First of all, do You Have Network?"
 	fi
 done
 }
@@ -365,13 +360,13 @@ while read -u3 -ra up ; do
 
         [ "$_version_" != "$_pkg_version_" ] && _update_list_+=( "$_pkg_" )
     else
-	    _em_ "First of all, do You Have Network?"
+	    die "First of all, do You Have Network?"
     fi
 
     [ "${_update_list_[*]}" ] && {
         g_er "There is (${#_update_list_[@]}) Rusty Packages here, do you want to Update them ${Blue}[Y/n]"
         read -N1 -p "${Blue}${Bold}  --> ${Reset}" Y_N
-        [[ "$Y_N" =~ [Y[y] ]] && _pkgbuild_ "${_update_list_[@]}"
+        [[ "$Y_N" =~ [Yy] ]] && _pkgbuild_ "${_update_list_[@]}"
     }||{
         g_er "All is up to date"
     }
@@ -427,7 +422,7 @@ if curl -s "https://aur.archlinux.org/packages/$PKG" -o "$_CACHE_INFO_" ; then
         }
     }' "$_CACHE_INFO_"
 else
-    _em_ "First of all, do You Have Network?"
+    die "First of all, do You Have Network?"
 fi
 }
 #}}}
@@ -447,11 +442,13 @@ _clean_(){
 # HELP MSG #
 #----------#{{{
 _help_dialog_(){
-cat <<- HELP
-${_name_^}: Bash Arch User Repository
+while read ; do
+    printf "%b\n" "$REPLY"
+done <<- HELP
+${name^}: Bash Arch User Repository
 AUR Package Manager in Bure Bash
 
-usage : ${_name_} [OPTION]... [PACKAGE]...
+usage : ${name} [OPTION]... [PACKAGE]...
 
 [OPTION] Only short option for now
  -S PKG     Install target PKG
@@ -464,7 +461,7 @@ usage : ${_name_} [OPTION]... [PACKAGE]...
  -p NUM     Number of Packages Per Page (50,100,250)
  -m         Make/Compile PKGBUILD of PKG, nothing else
  -e         Edit PKGBUILD in installation mode
- -k         Keep Complie folder
+ -k         Keep Compile folder
  -c         Clean Baur Cache
  -h         Print help usage
 
@@ -481,16 +478,17 @@ usage : ${_name_} [OPTION]... [PACKAGE]...
  s          Submitter
 
 [VARIABLES] change script commands
-BAUR_CACHE        Directory to use for Baur Cache (\$HOME/.cache/baur)
-TAR_CMD           Tar command to use (tar)
-TAR_FLG           Pass arguments to Tar (xf)
-MAKEPKG_CMD       Makepkg command to use (makepkg)
-MAKEPKG_INS_FLG   Pass arguments to Makepkg install (-rsif)
-MAKEPKG_COM_FLG   Pass arguments to Makepkg Compile (-s)
-BAUR_EDITOR       Editor to use when editing PKGBUILDs (\$EDITOR)
+ BAUR_CACHE        Directory to use for Baur Cache      (\$HOME/.cache/baur)
+ BAUR_EDITOR       Editor to use when editing PKGBUILDS (\$EDITOR)
+ TAR_CMD           Tar command to use                   (tar)
+ TAR_FLG           Pass arguments to Tar                (xf)
+ MAKEPKG_CMD       Makepkg command to use               (makepkg)
+ MAKEPKG_INS_FLG   Pass arguments to Makepkg install    (-rsif)
+ MAKEPKG_COM_FLG   Pass arguments to Makepkg Compile    (-s)
 
 Note :
- if you choose (-d|-m|-k) the package will be in you Current Directory
+ * if you choose (-d|-m|-k) the package will be in you Current Directory
+ * Export ${name^^} Varible when you use them
 
 HELP
 exit 0
@@ -574,10 +572,10 @@ while getopts ":S:R:us:i:d:b:p:mcekh" OPT ; do
 			_help_dialog_
 			;;
         : ) # no arg giving
-            _em_ "You give me nothing to looking for "
+            die "You give me nothing to looking for "
             ;;
 		* ) # wrong option
-			_em_ "What is that (-$OPTARG)?. Did you Read Help dialog (-h)?"
+			die "What is that (-$OPTARG)?. Did you Read Help dialog (-h)?"
 			;;
 	esac
 done
@@ -617,7 +615,7 @@ MAKEPKG_COM_FLG=${MAKEPKG_COM_FLG:--s}
 #----------------------#
 # RUN SELECTED OPTIONS #
 #----------------------#{{{
-(( _BAUR_MA_ = 1 ))     || _em_ "I have only Two Hands can't do many jobs at once (-d,-S,-s,-i,-R)"
+(( _BAUR_MA_ = 1 ))     || die "I have only Two Hands can't do many jobs at once (-d,-S,-s,-i,-R)"
 [ "$_BAUR_INSTALL_" ]   && _pkgbuild_ "${_BAUR_INSTALL_[@]}"    || true
 [ "$_BAUR_REMOVE_" ]    && _remove_ "${_BAUR_REMOVE_[@]}"       || true
 [ "$_BAUR_UPDATE_" ]    && _update_ "${_pkg_list_[@]}"          || true
