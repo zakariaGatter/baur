@@ -22,11 +22,13 @@ declare -u CHOICE # make variable upper case
 # COLOR VARIABLES #
 #-----------------#
 Coff='\e[0m'
-Cred='\e[0;31m'
-Cgreen='\e[0;32m'
-Cyellow='\e[0;33m'
-Cblue='\e[0;34m'
-Cbold='\e1m'
+Cred='\e[1;31m'
+Cgreen='\e[1;32m'
+Cyellow='\e[1;33m'
+Cblue='\e[1;34m'
+Cmagenta='\e[1;35m'
+Ccyan='\e[1;36m'
+Cwhite='\e[1;37m'
 
 #-------------------#
 # CACHE VARIABLES #
@@ -56,21 +58,28 @@ die(){
 # ERROR MESSAGE #
 #---------------#
 error(){
-    printf "%b\n" "==> ERROR: $@" >&2
+    printf "${Cred}==> ERROR:${Cwhite} %b${Coff}\n" "$@" >&2
 }
 
 #---------------#
 # GREEN MESSAGE #
 #---------------#
 gmsg(){
-    printf "%b\n" "${Cgreen}==>$Coff $@" >&2
+    printf "${Cgreen}==>${Cwhite} %b${Coff}\n" "$@"
 }
 
 #--------------#
 # BLUE MESSAGE #
 #--------------#
 bmsg(){
-    printf "%b\n" "$Cblue  ->$Coff $@" >&2
+    printf "$Cblue  ->${Cwhite} %b${Coff}\n" "$@"
+}
+
+#------------------#
+# BLUE DOT MESSAGE #
+#------------------#
+bdot(){
+    printf "${Cblue}::${Cwhite} %b${Coff}" "$@"
 }
 
 #-----------------------#
@@ -139,17 +148,17 @@ pkg="${1// /+}"
 
 [ "$pkg" ] || die "Empty Box!! what should i do with this"
 
-PAGE=${PAGE:-/packages/?O=0&SeB=nd&K=$pkg&PP=50}
+PAGE=${PAGE:-/packages?O=0&K=$pkg}
 
-printf "%s\r" ":: Retrieving sources ..."
+bdot "Retrieving sources ...\r"
 # Download source webpage
 while [ "$PAGE" ]; do
     if curl -s "https://aur.archlinux.org$PAGE" --connect-timeout 5 -o $SOURCE_TMP; then
         unset PAGE
         AmpConvert $SOURCE_TMP
-        printf "%s\r" ":: Get Search informations ..."
+        bdot "Get Search informations ...\r"
         GetSearchInfo $SOURCE_TMP
-        printf "%s\r" ":: Get Packages List from source ..."
+        bdot "Get Packages List from source ...\r"
         GetPackageList $SOURCE_TMP
         PackageCheck
         NiceList
@@ -174,7 +183,7 @@ for num in ${!PACKAGES[@]}; do
 
     while read ; do
         if [ "$REPLY" = "$pName" ]; then
-            PACKAGES[$num]+="${Cred}[Installed]$Coff"
+            PACKAGES[$num]+="[Installed]"
             break
         fi
     done < <(pacman -Qqm)
@@ -196,7 +205,13 @@ for (( num=1; num<=${#PACKAGES[@]}; num++ )); do
     pMaintainer="${pkg[5]}"
     pInstall="${pkg[6]}"
 
-    printf "%.3d aur/%s %s (%s %s %s) %s\n  %b\n\n" "${Cbold}$num${Coff}" "${Cblue}aur/${Coff}$pName" "$pVersion" "${Cyellow}$pMaintainer" "$pVote" "$pPopularity${Coff}" "$pInstall" "$pDescription"
+    printf "${Cwhite}%.3d ${Ccyan}aur/${Cwhite}%s ${Cgreen}%s ${Cyellow}(%s %s %s)${Cblue} %s${Coff}\n  %b\n\n" \
+        "$num" \
+        "$pName" \
+        "$pVersion" \
+        "$pMaintainer" "$pVote" "$pPopularity" \
+        "$pInstall" \
+        "$pDescription"
 done
 }
 
@@ -205,13 +220,13 @@ done
 #--------------------#
 UserPick(){
 while true ; do
-printf "${Cblue}::$Coff %s; [N]ext/[P]rev page, [R]efresh\n" "${INFO[*]}"
-printf "${Cblue}::$Coff Packages to Install (ex: 1 2 3), [Q/q]uit."
+printf "${Cblue}::$Coff %s; ${Ccyan}[N]ext/[P]rev${Coff} page, ${Cgreen}[R]efresh${Coff}\n" "${INFO[*]}"
+printf "${Cblue}::$Coff Packages to Install (ex: 1 2 3), ${Cred}[Q/q]uit.${Coff}"
 printf "${Cblue}::$Coff "
 read CHOICE
 
 # press q to quit
-[ "$CHOICE" = "Q" ] && { exit 0; rm -f $SOURCE_TMP ;}
+[ "$CHOICE" = "Q" ] && { rm -f $SOURCE_TMP; exit 0; }
 
 # press n or p for next or Prev
 if [ "$CHOICE" = "N" ]; then
@@ -265,6 +280,7 @@ FetchInstallAur(){
         cd $BAUR_CACHE/$Pkg
         makepkg -rfsi
         cd "$OLDPWD"
+        rm -rf "$BAUR_CACHE/$Pkg.tar.gz" "$BAUR_CACHE/$Pkg"
     else
         die "Your Network is broken just like you"
     fi
@@ -296,7 +312,8 @@ while read -a line ; do
     PkgName="${line[0]}"
     PkgVersion="${line[1]}"
 
-    printf "%s\n" "check for '$PkgName' New Version"
+    bdor "Retrieving Source...\r"
+    bdot "Check for '$PkgName' New Version.\r"
     if curl -s "https://aur.archlinux.org/cgit/aur.git/plain/PKGBUILD?h=$PkgName" --connect-timeout 5 -o "$SOURCE_TMP"; then
         source "$SOURCE_TMP"
         NewVersion=$pkgver
@@ -304,13 +321,13 @@ while read -a line ; do
     else
         die "Network slow as a snale"
     fi
-done < (pacman -Qm)
+done < <(pacman -Qm)
 
 if [ "${PkgToUpdate[*]}" ]; then
     gmsg "Packages to update ..."
     for item in ${PkgToUpdate[@]}; { bmsg "$item" ;}
-    printf ":: There is (${Cbold} %.3d ${Coff}) Rusty Packages here, do you want to update them [Y/n]\n" "${#PkgToUpdate[@]}"
-    printf ":: "
+    printf "${Cblue}::${Coff} There is (${Cred} %.3d ${Coff}) Rusty Packages here, do you want to update them ${Cgreen}[Y/n]${Coff}\n" "${#PkgToUpdate[@]}"
+    printf "${Cblue}::${Coff} "
     read CHOICE
     if [ "$CHOICE" = "Y" ]; then
         for item in ${PkgToUpdate[@]}; do
@@ -354,32 +371,14 @@ else
 fi
 
 for num in ${!PKGINFO[@]}; do
-    printf "%-15s: %s\n" "${Cbold}${PKGINFO[$num]%%:*}${Coff}" "${PKGINFO[$num]#*:}"
+    printf "${Cwhite}%-15s:${Coff} %s\n" "${PKGINFO[$num]%%:*}" "${PKGINFO[$num]#*:}"
 done
 
-printf "%-15s:\n" "${Cbold}Dependencies${Coff}"
+printf "${Cwhite}%-15s:${Coff} \n" "Dependencies"
 IFS=';' read -a DEPSLIST <<< $PKGDEPS
 printf "\t%s\n" "${DEPSLIST[@]}"
 
 unset line TABLE DEPS cnt PKGINFO PKGDEPS num DEPSLIST
-}
-
-#---------------------------#
-# CLEAN BAUR PACKAGES CACHE #
-#---------------------------#
-CleanCache(){
-CACHE_LIST=( $BAUR_CACHE/*.tar.gz )
-
-if [ "${CACHE_LIST[*]}" ]; then
-    gmsg "Clean ${name^} Cache folder"
-    for clean in ${CACHE_LIST[@]}; do
-        Cname=${clean//.tar.gz}
-        rm -rf "$Cname" "$clean" && bmsg "Clean [${Cname##*/}] Package "
-    done
-    unset CACHE_LIST clean Cname
-else
-    error "Cache folder is Emplty"
-fi
 }
 
 #-------------#
@@ -398,7 +397,6 @@ OPTIONS:
     -R <Pkgs>   Remove Giving Packages
     -U          Update All AUR Packages
     -i <Pkg>    Show Pkg information
-    -c          Clean baur Cache folder
     -h          Show this help dialog
     -v          Display version information
 
@@ -409,7 +407,7 @@ HELP
 # MAIN FUNCTION #
 #---------------#
 MainFunc(){
-OPTIONS="sSRUichv"
+OPTIONS="sSRUihv"
 while [ "$1" ]; do
     case "$1" in
         -s ) options[s]=true
