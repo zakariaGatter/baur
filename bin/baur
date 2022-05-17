@@ -3,8 +3,8 @@
 #-------------#
 # SCRIPT NAME #
 #-------------#
-name=${0##*/}
-Version="0.1.0"
+declare -r name=${0##*/}
+declare -r Version="0.1.0"
 
 #---------------------#
 # ENABLE BASH OPTIONS #
@@ -86,14 +86,14 @@ bdot(){
 # CONVERT HTML AMP CHAR #
 #-----------------------#
 AmpConvert(){
-amp_char=( "&quot;" "&amp;" "&#039;" "&lt;" "&gt;" )
+amp_char=( "&quot;" "&amp;" "&#39;" "&lt;" "&gt;" )
 nor_char=( '"' '&' "'" '<' '>' )
 file="$1"
-for line in ${!amp_char[@]}; do
-    sed -i "s/${amp_char[$line]}/\\${nor_char[$line]}/g" $file
+for num in ${!amp_char[@]}; do
+    sed -i "s/${amp_char[$num]}/\\${nor_char[$num]}/g" $file
 done
 
-unset amp_char nor_char file
+unset amp_char nor_char file num
 }
 
 #------------------------#
@@ -124,6 +124,9 @@ file="$1"
 declare -i PkgCount=0
 unset PACKAGES
 
+# map file to array
+mapfile -t -s 460 -n 1310 LPKG < $file
+
 while read line ; do
     if [[ $line =~ /packages/[a-zA-Z0-9]+ ]]; then
         CONTINUE=true
@@ -136,7 +139,7 @@ while read line ; do
             [ "$resoult" ] && PACKAGES[$PkgCount]+="$resoult;"
         fi
     fi
-done < $file
+done < <(printf "%s\n" "${LPKG[@]}")
 unset file line CONTINUE resoult PkgCount
 }
 
@@ -178,17 +181,9 @@ done
 PackageCheck(){
 for num in ${!PACKAGES[@]}; do
     IFS=";" read -a pkg <<< "${PACKAGES[$num]}"
-
-    pName="${pkg[0]}"
-
-    while read ; do
-        if [ "$REPLY" = "$pName" ]; then
-            PACKAGES[$num]+="[Installed]"
-            break
-        fi
-    done < <(pacman -Qqm)
+    (pacman -Qqm ${pkg[0]} &> /dev/null) && PACKAGES[$num]+="[Installed]"
 done
-unset num pkg pName
+unset num pkg
 }
 
 #--------------------------#
@@ -205,7 +200,7 @@ for (( num=1; num<=${#PACKAGES[@]}; num++ )); do
     pMaintainer="${pkg[5]}"
     pInstall="${pkg[6]}"
 
-    printf "${Cwhite}%.3d ${Ccyan}aur/${Cwhite}%s ${Cgreen}%s ${Cyellow}(%s %s %s)${Cblue} %s${Coff}\n  %b\n\n" \
+    printf "${Cwhite}%.3d ${Ccyan}aur/${Cwhite}%s ${Cgreen}%s ${Cyellow}(%s %s %s)${Cred} %s${Coff}\n  %b\n\n" \
         "$num" \
         "$pName" \
         "$pVersion" \
@@ -220,8 +215,8 @@ done
 #--------------------#
 UserPick(){
 while true ; do
-printf "${Cblue}::$Coff %s; ${Ccyan}[N]ext/[P]rev${Coff} page, ${Cgreen}[R]efresh${Coff}\n" "${INFO[*]}"
-printf "${Cblue}::$Coff Packages to Install (ex: 1 2 3), ${Cred}[Q/q]uit.${Coff}"
+printf "${Cblue}::$Coff %s ${Ccyan}[N]ext/[P]rev${Coff} page, ${Cgreen}[R]efresh${Coff}\n" "${INFO[*]}"
+printf "${Cblue}::$Coff Packages to Install (ex: 1 2 3), ${Cred}[Q/q]uit.${Coff}\n"
 printf "${Cblue}::$Coff "
 read CHOICE
 
@@ -233,26 +228,23 @@ if [ "$CHOICE" = "N" ]; then
     while read ; do
         if [[ $REPLY =~ Next ]]; then
             IFS='"' read -a NEXT <<< "$REPLY"
-            PAGE=${NEXT[-6]}
-            break
+            PAGE="${NEXT[-6]}"
+            break 2
         fi
-    done < <(tail -30 $SOURCE_TMP)
+    done< <(tail -30 $SOURCE_TMP)
 elif [ "$CHOICE" = "P" ]; then
     while read ; do
         if [[ $REPLY =~ Previous ]]; then
             IFS='"' read -a PERV <<< "$REPLY"
-            PAGE=${PERV[7]}
-            break
+            PAGE="${PERV[7]}"
+            break 2
         fi
     done < <(tail -30 $SOURCE_TMP)
 elif [ "$CHOICE" = "R" ]; then
     NiceList
 else
     for num in ${CHOICE[@]}; do
-        if (( num == num )); then
-            error "What a Letter doing here !"
-            continue
-        elif (( num <= 0 || num > ${#PACKAGES[@]} )); then
+        if (( num <= 0 || num > ${#PACKAGES[@]} )); then
             error "Just like McDonald's. Pick from the menu"
             continue
         fi
@@ -317,7 +309,7 @@ while read -a line ; do
     if curl -s "https://aur.archlinux.org/cgit/aur.git/plain/PKGBUILD?h=$PkgName" --connect-timeout 5 -o "$SOURCE_TMP"; then
         source "$SOURCE_TMP"
         NewVersion=$pkgver
-        [ "$PkgVersion" =! "$NewVersion" ] && PkgToUpdate+=( "$PkgName Old(${Cbold}$PkgVersion${Coff}) -> New(${Cbold}$NewVersion${Coff})" )
+        [ "$PkgVersion" =! "$NewVersion" ] && PkgToUpdate+=( "$PkgName Old(${Cred}$PkgVersion${Coff}) -> New(${Cgreen}$NewVersion${Coff})" )
     else
         die "Network slow as a snale"
     fi
