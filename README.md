@@ -10,18 +10,22 @@
 * Remove AUR Packages
 * Update AUR Packages
 * Show Package Information
-* Clean Baur cache
 
 ### TODO list
 
 * [X] Add colors to script
 
-* Next Version
+* Future Versions
     * [ ] Make the pick list interactive
-    * [ ] Sort Order the search **Descending** or **Ascending**
+    * [ ] Sort search order **Descending** or **Ascending**
+    * [ ] Download only the Package Snapshot Tarball
+    * [ ] Save Installed package cache
+    * [ ] Download only the PKGBUILD file
+    * [ ] Edit PKGBUILD during install
+    * [ ] Start a shell in the package directory
 
 ### Help Needed
-* You can help me by just try **BAUR** and report any bugs or issue 
-* Bash/Zsh completion for BAUR
+* Bash/Zsh completion for **BAUR**
+* You can help me by just try **BAUR** and report any bugs or issues
 
 [Baur]:https://github.com/zakariagatter/baur
