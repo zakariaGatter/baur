@@ -390,45 +390,34 @@ HELP
 # MAIN FUNCTION #
 #---------------#
 MainFunc(){
-OPTIONS="sSRUichv"
-while [ "$1" ]; do
-    case "$1" in
-        -s ) options[s]=true
-            if ! [[ "$2" =~ ^-[$OPTIONS]$ ]]; then
-                SEARCH="$2"
-                shift
-            fi
-            shift
+while getopts ':s:S:R:i:Uchv' OPT ; do
+    case "$OPT" in 
+        s ) options[s]=true
+            SEARCH="$OPTARG"
             ;;
-        -S ) options[S]=true
-            until [[ "$2" =~ ^-[$OPTIONS]$ ]] || [ -z "$2" ]; do
+        S ) options[S]=true
+            until [ -z "$2" ] || [[ $2 =~ ^-[sSRiUchv]$ ]]; do
                 PkgList+=( "$2" )
                 shift
             done
-            shift
             ;;
-        -R ) options[R]=true
-            until [[ "$2" =~ ^-[$OPTIONS]$ ]] || [ -z "$2" ]; do
+        R ) options[R]=true
+            until [ -z "$2" ] || [[ $2 =~ ^-[sSRiUchv]$ ]]; do
                 PkgList+=( "$2" )
                 shift
             done
-            shift
             ;;
-        -U ) options[U]=true
+        i ) options[i]=true
+            SEARCH="$OPTARG"
             ;;
-        -i ) options[i]=true
-            if ! [[ "$2" =~ ^-[$OPTIONS]$ ]]; then
-                SEARCH="$2"
-                shift
-            fi
-            shift
-            ;;
-        -c ) options[c]=true ;;
-        -h ) options[h]=true ;;
-        -v ) options[v]=true ;;
-        * ) die "What is this -- '$1'. Did you need help.";;
+        U ) options[U]=true ;;
+        c ) options[c]=true ;;
+        h ) options[h]=true ;;
+        v ) options[v]=true ;;
+        : ) die "" ;;
+        * ) die "" ;;
     esac
-    shift
+    shift $(( OPTIND - 1 ))
 done
 }
 
@@ -440,7 +429,7 @@ MainFunc "$@"
 #-----------------#
 # COLOR VARIABLES #
 #-----------------#
-if [ "${options[c]}" ]; then 
+if [ -z "${options[c]}" ]; then 
     Coff='\e[0m'
     Cred='\e[1;31m'
     Cgreen='\e[1;32m'
