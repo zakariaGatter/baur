@@ -18,18 +18,6 @@ declare -A PACKAGES
 declare -A options
 declare -u CHOICE # make variable upper case
 
-#-----------------#
-# COLOR VARIABLES #
-#-----------------#
-Coff='\e[0m'
-Cred='\e[1;31m'
-Cgreen='\e[1;32m'
-Cyellow='\e[1;33m'
-Cblue='\e[1;34m'
-Cmagenta='\e[1;35m'
-Ccyan='\e[1;36m'
-Cwhite='\e[1;37m'
-
 #-------------------#
 # CACHE VARIABLES #
 #-------------------#
@@ -180,8 +168,7 @@ done
 #---------------------------------#
 PackageCheck(){
 for num in ${!PACKAGES[@]}; do
-    IFS=";" read -a pkg <<< "${PACKAGES[$num]}"
-    (pacman -Qqm ${pkg[0]} &> /dev/null) && PACKAGES[$num]+="[Installed]"
+    (pacman -Qqm ${PACKAGES[$num]%%;*} &> /dev/null) && INSTTAL[$num]+="[Installed]"
 done
 unset num pkg
 }
@@ -198,7 +185,7 @@ for (( num=1; num<=${#PACKAGES[@]}; num++ )); do
     pPopularity="${pkg[3]}"
     pDescription="${pkg[4]}"
     pMaintainer="${pkg[5]}"
-    pInstall="${pkg[6]}"
+    pInstall="${INSTALL[$num]}"
 
     printf "${Cwhite}%.3d ${Ccyan}aur/${Cwhite}%s ${Cgreen}%s ${Cyellow}(%s %s %s)${Cred} %s${Coff}\n  %b\n\n" \
         "$num" \
@@ -241,6 +228,7 @@ elif [ "$CHOICE" = "P" ]; then
         fi
     done < <(tail -30 $SOURCE_TMP)
 elif [ "$CHOICE" = "R" ]; then
+    PackageCheck
     NiceList
 else
     for num in ${CHOICE[@]}; do
@@ -248,7 +236,7 @@ else
             error "Just like McDonald's. Pick from the menu"
             continue
         fi
-        FetchInstallAur "${PACKAGES[$num]}"
+        FetchInstallAur "${PACKAGES[$num]%%;*}"
     done
 fi
 done
@@ -303,13 +291,16 @@ UpdatePkgs(){
 while read -a line ; do
     PkgName="${line[0]}"
     PkgVersion="${line[1]}"
+    NPkgVersion=${PkgVersion%.*}
+    NPkgVersion=${NPkgVersion//[[:alpha:]-.]}
 
-    bdor "Retrieving Source...\r"
-    bdot "Check for '$PkgName' New Version.\r"
+    bdot "Check for '$PkgName' New Version.\n"
     if curl -s "https://aur.archlinux.org/cgit/aur.git/plain/PKGBUILD?h=$PkgName" --connect-timeout 5 -o "$SOURCE_TMP"; then
         source "$SOURCE_TMP"
         NewVersion=$pkgver
-        [ "$PkgVersion" =! "$NewVersion" ] && PkgToUpdate+=( "$PkgName Old(${Cred}$PkgVersion${Coff}) -> New(${Cgreen}$NewVersion${Coff})" )
+        NNewVersion=${NewVersion%.*}
+        NNewVersion=${NNewVersion//[[:alpha:]-.]}
+        [ "$NPkgVersion" -lt "$NNewVersion" ] && PkgToUpdate+=( "$PkgName ${Coff}Old(${Cred}$PkgVersion${Coff}) -> New(${Cgreen}$NewVersion${Coff})" )
     else
         die "Network slow as a snale"
     fi
@@ -317,14 +308,13 @@ done < <(pacman -Qm)
 
 if [ "${PkgToUpdate[*]}" ]; then
     gmsg "Packages to update ..."
-    for item in ${PkgToUpdate[@]}; { bmsg "$item" ;}
+    for item in "${PkgToUpdate[@]}"; { bmsg "$item" ;}
     printf "${Cblue}::${Coff} There is (${Cred} %.3d ${Coff}) Rusty Packages here, do you want to update them ${Cgreen}[Y/n]${Coff}\n" "${#PkgToUpdate[@]}"
     printf "${Cblue}::${Coff} "
     read CHOICE
     if [ "$CHOICE" = "Y" ]; then
         for item in ${PkgToUpdate[@]}; do
-            read -a pkg <<< "$item"
-            FetchInstallAur "${pkg[0]}"
+            FetchInstallAur "${item%% *}"
         done
     fi
 fi
@@ -389,6 +379,7 @@ OPTIONS:
     -R <Pkgs>   Remove Giving Packages
     -U          Update All AUR Packages
     -i <Pkg>    Show Pkg information
+    -c          Disable coloring
     -h          Show this help dialog
     -v          Display version information
 
@@ -399,7 +390,7 @@ HELP
 # MAIN FUNCTION #
 #---------------#
 MainFunc(){
-OPTIONS="sSRUihv"
+OPTIONS="sSRUichv"
 while [ "$1" ]; do
     case "$1" in
         -s ) options[s]=true
@@ -445,6 +436,20 @@ done
 # RUN MAIN FUNCTION #
 #-------------------#
 MainFunc "$@"
+
+#-----------------#
+# COLOR VARIABLES #
+#-----------------#
+if [ "${options[c]}" ]; then 
+    Coff='\e[0m'
+    Cred='\e[1;31m'
+    Cgreen='\e[1;32m'
+    Cyellow='\e[1;33m'
+    Cblue='\e[1;34m'
+    Cmagenta='\e[1;35m'
+    Ccyan='\e[1;36m'
+    Cwhite='\e[1;37m'
+fi
 
 #------------------#
 # RUN USER OPTIONS #
