@@ -77,11 +77,11 @@ AmpConvert(){
 amp_char=( "&quot;" "&amp;" "&#39;" "&lt;" "&gt;" )
 nor_char=( '"' '&' "'" '<' '>' )
 file="$1"
-for num in ${!amp_char[@]}; do
-    sed -i "s/${amp_char[$num]}/\\${nor_char[$num]}/g" $file
+for number in ${!amp_char[@]}; do
+    sed -i "s/${amp_char[$number]}/\\${nor_char[$number]}/g" $file
 done
 
-unset amp_char nor_char file num
+unset amp_char nor_char file number
 }
 
 #------------------------#
@@ -135,12 +135,7 @@ unset file line CONTINUE resoult PkgCount
 # DOWNLOAD SOURCE WEBPAGE #
 #-------------------------#
 GetSourceFile(){
-pkg="${1// /+}"
-
-[ "$pkg" ] || die "Empty Box!! what should i do with this"
-
-PAGE=${PAGE:-/packages?O=0&K=$pkg}
-
+PAGE=${PAGE:-/packages?O=0&K=${1// /+}}
 bdot "Retrieving sources ...\r"
 # Download source webpage
 while [ "$PAGE" ]; do
@@ -167,28 +162,28 @@ done
 # CHECK IF THE PACGE IN INSTALLED #
 #---------------------------------#
 PackageCheck(){
-for num in ${!PACKAGES[@]}; do
-    (pacman -Qqm ${PACKAGES[$num]%%;*} &> /dev/null) && INSTTAL[$num]+="[Installed]"
+for number in ${!PACKAGES[@]}; do
+    (pacman -Qqm ${PACKAGES[$number]%%;*} &> /dev/null) && INSTTAL[$number]+="[Installed]"
 done
-unset num pkg
+unset number
 }
 
 #--------------------------#
 # SHOW LIST IN A NICE FORM #
 #--------------------------#
 NiceList(){
-for (( num=1; num<=${#PACKAGES[@]}; num++ )); do
-    IFS=";" read -a pkg <<< "${PACKAGES[$num]}"
+for (( number=1; number<=${#PACKAGES[@]}; number++ )); do
+    IFS=";" read -a pkg <<< "${PACKAGES[$number]}"
     pName="${pkg[0]}"
     pVersion="${pkg[1]}"
     pVote="${pkg[2]}"
     pPopularity="${pkg[3]}"
     pDescription="${pkg[4]}"
     pMaintainer="${pkg[5]}"
-    pInstall="${INSTALL[$num]}"
+    pInstall="${INSTALL[$number]}"
 
     printf "${Cwhite}%.3d ${Ccyan}aur/${Cwhite}%s ${Cgreen}%s ${Cyellow}(%s %s %s)${Cred} %s${Coff}\n  %b\n\n" \
-        "$num" \
+        "$number" \
         "$pName" \
         "$pVersion" \
         "$pMaintainer" "$pVote" "$pPopularity" \
@@ -231,17 +226,17 @@ elif [ "$CHOICE" = "R" ]; then
     PackageCheck
     NiceList
 else
-    for num in ${CHOICE[@]}; do
-        if (( num <= 0 || num > ${#PACKAGES[@]} )); then
+    for number in ${CHOICE[@]}; do
+        if (( number <= 0 || number > ${#PACKAGES[@]} )); then
             error "Just like McDonald's. Pick from the menu"
             continue
         fi
-        FetchInstallAur "${PACKAGES[$num]%%;*}"
+        FetchInstallAur "${PACKAGES[$number]%%;*}"
     done
 fi
 done
 
-unset pName pVersion pVote pPopularity pDescription pMaintainer pInstall NEXT PERV num
+unset pName pVersion pVote pPopularity pDescription pMaintainer pInstall NEXT PERV number
 }
 
 #-----------------------------------#
@@ -292,14 +287,14 @@ while read -a line ; do
     PkgName="${line[0]}"
     PkgVersion="${line[1]}"
     NPkgVersion=${PkgVersion%.*}
-    NPkgVersion=${NPkgVersion//[[:alpha:]-.]}
+    NPkgVersion=${NPkgVersion//[[:alpha:]-.+_]}
 
     bdot "Check for '$PkgName' New Version.\n"
     if curl -s "https://aur.archlinux.org/cgit/aur.git/plain/PKGBUILD?h=$PkgName" --connect-timeout 5 -o "$SOURCE_TMP"; then
         source "$SOURCE_TMP"
         NewVersion=$pkgver
         NNewVersion=${NewVersion%.*}
-        NNewVersion=${NNewVersion//[[:alpha:]-.]}
+        NNewVersion=${NNewVersion//[[:alpha:]-.+_]}
         [ "$NPkgVersion" -lt "$NNewVersion" ] && PkgToUpdate+=( "$PkgName ${Coff}Old(${Cred}$PkgVersion${Coff}) -> New(${Cgreen}$NewVersion${Coff})" )
     else
         die "Network slow as a snale"
@@ -326,9 +321,7 @@ unset line PkgName PkgVersion NewVersion PkgToUpdate item pkg
 #-------------------#
 ShowPkgInfo(){
 pkg="$1"
-cnt=0
-
-[ "$pkg" ] || die "Empty Box!! what should i do with this ?!"
+count=0
 
 if curl -s "https://aur.archlinux.org/packages/$pkg" --connect-timeout 5 -o $SOURCE_TMP; then
     while read line ; do
@@ -338,9 +331,9 @@ if curl -s "https://aur.archlinux.org/packages/$pkg" --connect-timeout 5 -o $SOU
         if [ "$TABLE" ]; then
             read resoult < <(sed "s/<[^>]*>//g" <<< $line)
             [ "$line" = "</table>" ] && unset TABLE
-            [ "$line" = "</tr>" ] && ((cnt++))
+            [ "$line" = "</tr>" ] && ((count++))
             [[ "$resoult" =~ (packages|keyword|>) ]] && continue
-            [ "$resoult" ] && PKGINFO[$cnt]+="$resoult "
+            [ "$resoult" ] && PKGINFO[$count]+="$resoult "
         elif [ "$DEPS" ]; then
             read resoult < <(sed "s/<[^>]*>//g" <<< $line)
             [ "$line" = "</div>" ] && unset DEPS
@@ -352,15 +345,15 @@ else
     die "First of all, do you have Network?"
 fi
 
-for num in ${!PKGINFO[@]}; do
-    printf "${Cwhite}%-15s:${Coff} %s\n" "${PKGINFO[$num]%%:*}" "${PKGINFO[$num]#*:}"
+for number in ${!PKGINFO[@]}; do
+    printf "${Cwhite}%-15s:${Coff} %s\n" "${PKGINFO[$number]%%:*}" "${PKGINFO[$number]#*:}"
 done
 
 printf "${Cwhite}%-15s:${Coff} \n" "Dependencies"
 IFS=';' read -a DEPSLIST <<< $PKGDEPS
 printf "\t%s\n" "${DEPSLIST[@]}"
 
-unset line TABLE DEPS cnt PKGINFO PKGDEPS num DEPSLIST
+unset line TABLE DEPS count PKGINFO PKGDEPS number DEPSLIST
 }
 
 #-------------#
@@ -396,13 +389,13 @@ while getopts ':s:S:R:i:Uchv' OPT ; do
             SEARCH="$OPTARG"
             ;;
         S ) options[S]=true
-            until [ -z "$2" ] || [[ $2 =~ ^-[sSRiUchv]$ ]]; do
+            until [ -z "$2" ] || [[ $2 =~ ^-.$ ]]; do
                 PkgList+=( "$2" )
                 shift
             done
             ;;
         R ) options[R]=true
-            until [ -z "$2" ] || [[ $2 =~ ^-[sSRiUchv]$ ]]; do
+            until [ -z "$2" ] || [[ $2 =~ ^-.$ ]]; do
                 PkgList+=( "$2" )
                 shift
             done
@@ -414,7 +407,7 @@ while getopts ':s:S:R:i:Uchv' OPT ; do
         c ) options[c]=true ;;
         h ) options[h]=true ;;
         v ) options[v]=true ;;
-        : ) die "" ;;
+        : ) die "Empty Box!! what should i do with this." ;;
         * ) die "" ;;
     esac
     shift $(( OPTIND - 1 ))
