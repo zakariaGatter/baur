@@ -6,17 +6,18 @@
 declare -r name=${0##*/}
 declare -r Version="0.1.0"
 
-#---------------------#
-# ENABLE BASH OPTIONS #
-#---------------------#
-shopt -s dotglob extglob nullglob
-
 #------------------#
 # GENERAL VARIABLE #
 #------------------#
 declare -A PACKAGES
+declare -A INSTALL
 declare -A options
 declare -u CHOICE # make variable upper case
+
+#---------------------#
+# ENABLE BASH OPTIONS #
+#---------------------#
+shopt -s dotglob extglob nullglob
 
 #-------------------#
 # CACHE VARIABLES #
@@ -53,21 +54,21 @@ error(){
 # GREEN MESSAGE #
 #---------------#
 gmsg(){
-    printf "${Cgreen}==>${Cwhite} %b${Coff}\n" "$@"
+    printf "${Cgreen}==>${Cwhite} %b${Coff}\n" "$@" >&2
 }
 
 #--------------#
 # BLUE MESSAGE #
 #--------------#
 bmsg(){
-    printf "$Cblue  ->${Cwhite} %b${Coff}\n" "$@"
+    printf "$Cblue  ->${Cwhite} %b${Coff}\n" "$@" >&2
 }
 
 #------------------#
 # BLUE DOT MESSAGE #
 #------------------#
 bdot(){
-    printf "${Cblue}::${Cwhite} %b${Coff}" "$@"
+    printf "${Cblue}::${Cwhite} %b${Coff} ..." "$@" >&2
 }
 
 #-----------------------#
@@ -112,9 +113,6 @@ file="$1"
 declare -i PkgCount=0
 unset PACKAGES
 
-# map file to array
-mapfile -t -s 460 -n 1310 LPKG < $file
-
 while read line ; do
     if [[ $line =~ /packages/[a-zA-Z0-9]+ ]]; then
         CONTINUE=true
@@ -127,7 +125,7 @@ while read line ; do
             [ "$resoult" ] && PACKAGES[$PkgCount]+="$resoult;"
         fi
     fi
-done < <(printf "%s\n" "${LPKG[@]}")
+done < $file
 unset file line CONTINUE resoult PkgCount
 }
 
@@ -163,7 +161,7 @@ done
 #---------------------------------#
 PackageCheck(){
 for number in ${!PACKAGES[@]}; do
-    (pacman -Qqm ${PACKAGES[$number]%%;*} &> /dev/null) && INSTTAL[$number]+="[Installed]"
+    (pacman -Qqm ${PACKAGES[$number]%%;*} &> /dev/null) && INSTALL[$number]+="[Installed]"
 done
 unset number
 }
@@ -329,16 +327,24 @@ if curl -s "https://aur.archlinux.org/packages/$pkg" --connect-timeout 5 -o $SOU
         [[ $line =~ pkgdepslist ]] && DEPS=true
       
         if [ "$TABLE" ]; then
-            read resoult < <(sed "s/<[^>]*>//g" <<< $line)
-            [ "$line" = "</table>" ] && unset TABLE
-            [ "$line" = "</tr>" ] && ((count++))
-            [[ "$resoult" =~ (packages|keyword|>) ]] && continue
-            [ "$resoult" ] && PKGINFO[$count]+="$resoult "
+            if [ "$line" = "</table>" ]; then
+                unset TABLE
+            elif [ "$line" = "</tr>" ]; then
+                ((count++))
+            else
+                read resoult < <(sed "s/<[^>]*>//g" <<< $line)
+                [[ "$resoult" =~ (packages|keyword|>) ]] && continue
+                [ "$resoult" ] && PKGINFO[$count]+="$resoult "
+            fi
         elif [ "$DEPS" ]; then
-            read resoult < <(sed "s/<[^>]*>//g" <<< $line)
-            [ "$line" = "</div>" ] && unset DEPS
-            [ "$line" = "</li>" ] && PKGDEPS+=";"
-            [ "$resoult" ] && PKGDEPS+="$resoult "
+            if [ "$line" = "</div>" ];then
+                unset DEPS
+            elif [ "$line" = "</li>" ]; then
+                PKGDEPS+=";"
+            else
+                read resoult < <(sed "s/<[^>]*>//g" <<< $line)
+                [ "$resoult" ] && PKGDEPS+="$resoult "
+            fi
         fi
     done < $SOURCE_TMP
 else
@@ -408,9 +414,8 @@ while getopts ':s:S:R:i:Uchv' OPT ; do
         h ) options[h]=true ;;
         v ) options[v]=true ;;
         : ) die "Empty Box!! what should i do with this." ;;
-        * ) die "" ;;
+        * ) die "There no one with this name '-$OPTARG' lives here.\nAsk '$name -h'." ;;
     esac
-    shift $(( OPTIND - 1 ))
 done
 }
 
@@ -441,7 +446,6 @@ fi
 [ -z "${options[R]}" ] || RemovePackages
 [ -z "${options[U]}" ] || UpdatePkgs
 [ -z "${options[i]}" ] || ShowPkgInfo "$SEARCH"
-[ -z "${options[c]}" ] || CleanCache
 [ -z "${options[h]}" ] || HelpDialog
 [ -z "${options[v]}" ] || printf "%s: %s\n" "${name^}" "Version ($Version)"
 
