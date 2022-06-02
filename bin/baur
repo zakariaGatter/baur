@@ -9,10 +9,10 @@ declare -r Version="0.1.0"
 #------------------#
 # GENERAL VARIABLE #
 #------------------#
-declare -A PACKAGES
-declare -A INSTALL
-declare -A options
-declare -u CHOICE # make variable upper case
+declare -A PACKAGES     # list of packages in search resoult
+declare -A INSTALL      # check if the package is installed
+declare -A options      # user options
+declare -u CHOICE       # menu picker option make variable upper case
 
 #---------------------#
 # ENABLE BASH OPTIONS #
@@ -32,6 +32,7 @@ shopt -s dotglob extglob nullglob
 #--------------------#
 # TEMP FILE VARIALES #
 #--------------------#
+# make a temp file to store the wen page source
 read SOURCE_TMP< <(mktemp -q /tmp/${name}.XXX)
 
 #--------------#
@@ -68,12 +69,13 @@ bmsg(){
 # BLUE DOT MESSAGE #
 #------------------#
 bdot(){
-    printf "${Cblue}::${Cwhite} %b${Coff} ..." "$@" >&2
+    printf "${Cblue}::${Cwhite} %b${Coff}" "$@" >&2
 }
 
 #-----------------------#
 # CONVERT HTML AMP CHAR #
 #-----------------------#
+# replace special char from HTML to normal char instead of using a external application
 AmpConvert(){
 amp_char=( "&quot;" "&amp;" "&#39;" "&lt;" "&gt;" )
 nor_char=( '"' '&' "'" '<' '>' )
@@ -88,6 +90,11 @@ unset amp_char nor_char file number
 #------------------------#
 # GET SEARCH INFORMATION #
 #------------------------#
+# get the total packages and how many pages there is
+# loop through the temp file line by line
+# when you find '<dic class="pkglist-stats">'
+# start gathering information
+# exit if you find '<p>' the end of the paragraph the information end at it
 GetSearchInfo(){
 file="$1"
 unset INFO
@@ -159,9 +166,12 @@ done
 #---------------------------------#
 # CHECK IF THE PACGE IN INSTALLED #
 #---------------------------------#
+# pacman -Qm give you a list of all aur packages install on your system
+# creat a for loop go through all packages resoult from the search and check if there are already install in the system 
+# create a varible INSTALL with the package number and asign it as install
 PackageCheck(){
 for number in ${!PACKAGES[@]}; do
-    (pacman -Qqm ${PACKAGES[$number]%%;*} &> /dev/null) && INSTALL[$number]+="[Installed]"
+    (pacman -Qm ${PACKAGES[$number]%%;*}) && INSTALL[$number]+="[Installed]"
 done
 unset number
 }
@@ -170,6 +180,7 @@ unset number
 # SHOW LIST IN A NICE FORM #
 #--------------------------#
 NiceList(){
+# print package and there information
 for (( number=1; number<=${#PACKAGES[@]}; number++ )); do
     IFS=";" read -a pkg <<< "${PACKAGES[$number]}"
     pName="${pkg[0]}"
@@ -240,6 +251,12 @@ unset pName pVersion pVote pPopularity pDescription pMaintainer pInstall NEXT PE
 #-----------------------------------#
 # DOWNLOAD AND INSTALL AUR PACKAGES #
 #-----------------------------------#
+# download snapshot tarball 
+# decompress tarball
+# change dir to package folder
+# make package and install it
+# change dir back to old path
+# remove package cache
 FetchInstallAur(){
     Pkg="$1"
 
@@ -251,7 +268,7 @@ FetchInstallAur(){
         bmsg "Creating Working '$Pkg' Package folder ..."
         tar xf $BAUR_CACHE/$Pkg.tar.gz -C $BAUR_CACHE
         cd $BAUR_CACHE/$Pkg
-        makepkg -rfsi
+        makepkg $NC_MAKEPKG -rfsi
         cd "$OLDPWD"
         rm -rf "$BAUR_CACHE/$Pkg.tar.gz" "$BAUR_CACHE/$Pkg"
     else
@@ -263,13 +280,15 @@ FetchInstallAur(){
 #---------------------#
 # REMOVE AUR PACKAGES #
 #---------------------#
+# a simple command do remove aur packages from your system
 RemovePackages(){
-    sudo pacman -Rsn ${PkgList[@]}
+    sudo pacman $NC_PACMAN -Rsn ${PkgList[@]}
 }
 
 #----------------------#
 # INSTALL AUR PACKAGES #
 #----------------------#
+# loop through all giving packages in '-S' option and install them
 InstallPackages(){
     for pkg in ${PkgList[@]}; do
         FetchInstallAur "$pkg"
@@ -427,15 +446,22 @@ MainFunc "$@"
 #-----------------#
 # COLOR VARIABLES #
 #-----------------#
-if [ -z "${options[c]}" ]; then 
-    Coff='\e[0m'
-    Cred='\e[1;31m'
-    Cgreen='\e[1;32m'
-    Cyellow='\e[1;33m'
-    Cblue='\e[1;34m'
-    Cmagenta='\e[1;35m'
-    Ccyan='\e[1;36m'
-    Cwhite='\e[1;37m'
+Coff='\e[0m'
+Cred='\e[1;31m'
+Cgreen='\e[1;32m'
+Cyellow='\e[1;33m'
+Cblue='\e[1;34m'
+Cmagenta='\e[1;35m'
+Ccyan='\e[1;36m'
+Cwhite='\e[1;37m'
+
+#-------------------#
+# C OPTION NO COLOR #
+#-------------------#
+if [ "${options[c]}" ]; then 
+    unset Coff Cred Cgreen Cyellow Cblue Cmagenta Ccyan Cwhite
+    NC_MAKEPKG="-m"
+    NC_PACMAN="--color=never"
 fi
 
 #------------------#
