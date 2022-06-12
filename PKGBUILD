@@ -1,5 +1,6 @@
 pkgname=baur
 pkgver=0.1.0
+pkgrel=1
 pkgdesc="Arch User Repository in Pure Bash"
 makedepends=( 'git' )
 arch=( 'any' )
@@ -10,7 +11,7 @@ sha256sums=( 'SKIP' )
 
 package(){
     cd "$srcdir/baur"
-    install -Dm755 baur "$pkgdir/usr/bin/baur"
-    install -Dm644 LICENCE "$pkgdir/usr/share/licences/${pkgname}/LICENCE"
+    install -Dm755 bin/baur "$pkgdir/usr/bin/baur"
+    install -Dm644 LICENSE "$pkgdir/usr/share/licences/${pkgname}/LICENSE"
     install -Dm644 README.md "$pkgdir/usr/share/doc/${pkgname}/README.md"
 }

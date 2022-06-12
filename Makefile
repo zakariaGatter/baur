@@ -7,7 +7,8 @@ all:
 install:
 	@mkdir -p $(DESTDIR)$(PREFIX)/bin
 	@cp -p README.md $(DESTDIR)$(DOCDIR)
-	@cp -p fff $(DESTDIR)$(PREFIX)/bin/baur
+	@cp -p LICENSE $(DESTDIR)$(DOCDIR)
+	@cp -p bin/baur $(DESTDIR)$(PREFIX)/bin/baur
 	@chmod 755 $(DESTDIR)$(PREFIX)/bin/baur
 
 uninstall:

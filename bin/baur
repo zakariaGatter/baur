@@ -171,7 +171,7 @@ done
 # create a varible INSTALL with the package number and asign it as install
 PackageCheck(){
 for number in ${!PACKAGES[@]}; do
-    (pacman -Qm ${PACKAGES[$number]%%;*}) && INSTALL[$number]+="[Installed]"
+    (pacman -Qqm ${PACKAGES[$number]%%;*}) && INSTALL[$number]+="[Installed]"
 done
 unset number
 }
