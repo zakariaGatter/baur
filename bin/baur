@@ -171,7 +171,7 @@ done
 # create a varible INSTALL with the package number and asign it as install
 PackageCheck(){
 for number in ${!PACKAGES[@]}; do
-    (pacman -Qqm ${PACKAGES[$number]%%;*}) && INSTALL[$number]+="[Installed]"
+    (pacman -Qqm ${PACKAGES[$number]%%;*} &> /dev/null) && INSTALL[$number]+="[Installed]"
 done
 unset number
 }
@@ -304,15 +304,18 @@ while read -a line ; do
     PkgName="${line[0]}"
     PkgVersion="${line[1]}"
     NPkgVersion=${PkgVersion%.*}
-    NPkgVersion=${NPkgVersion//[[:alpha:]-.+_]}
+    NPkgVersion=${NPkgVersion//[[:alpha:]-\.+_]}
 
-    bdot "Check for '$PkgName' New Version.\n"
     if curl -s "https://aur.archlinux.org/cgit/aur.git/plain/PKGBUILD?h=$PkgName" --connect-timeout 5 -o "$SOURCE_TMP"; then
-        source "$SOURCE_TMP"
+        source "$SOURCE_TMP" 2> /dev/null && {
+            bdot "Check for '$PkgName' Local Install."
+            continue
+        }
         NewVersion=$pkgver
         NNewVersion=${NewVersion%.*}
-        NNewVersion=${NNewVersion//[[:alpha:]-.+_]}
+        NNewVersion=${NNewVersion//[[:alpha:]-\.+_]}
         [ "$NPkgVersion" -lt "$NNewVersion" ] && PkgToUpdate+=( "$PkgName ${Coff}Old(${Cred}$PkgVersion${Coff}) -> New(${Cgreen}$NewVersion${Coff})" )
+        bdot "Check for '$PkgName' New Version.\n"
     else
         die "Network slow as a snale"
     fi
@@ -325,7 +328,7 @@ if [ "${PkgToUpdate[*]}" ]; then
     printf "${Cblue}::${Coff} "
     read CHOICE
     if [ "$CHOICE" = "Y" ]; then
-        for item in ${PkgToUpdate[@]}; do
+        for item in "${PkgToUpdate[@]}"; do
             FetchInstallAur "${item%% *}"
         done
     fi
