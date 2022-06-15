@@ -307,8 +307,8 @@ while read -a line ; do
     NPkgVersion=${NPkgVersion//[[:alpha:]-\.+_]}
 
     if curl -s "https://aur.archlinux.org/cgit/aur.git/plain/PKGBUILD?h=$PkgName" --connect-timeout 5 -o "$SOURCE_TMP"; then
-        source "$SOURCE_TMP" 2> /dev/null && {
-            bdot "Check for '$PkgName' Local Install."
+        source "$SOURCE_TMP" 2> /dev/null || {
+            bdot "Check for '$PkgName' Local Install.\n"
             continue
         }
         NewVersion=$pkgver

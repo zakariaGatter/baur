@@ -17,6 +17,13 @@
 * and more on the way ...
 
 ### Preview
+<div align="center" width="100%">
+    <img width="48%" src="./preview/search1.png">
+    <img width="48%" src="./preview/search2.png">
+</div>
+<div align="center" width="100%">
+    <img width="48%" src="./preview/info2.png">
+</div>
 
 ### Installation
 
