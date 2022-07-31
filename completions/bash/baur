@@ -1,0 +1,15 @@
+_baur() {
+    local cur prev
+    _get_comp_words_by_ref cur prev
+
+    short=( '-s' '-S' '-R' '-U' '-i' '-c' '-q' '-h' '-h' )
+
+    if [[ $prev == -R ]]; then
+        COMPREPLY=( $(compgen -W "$(pacman -Qqm)") )
+    elif [[ $cur == -* ]]; then
+        COMPREPLY=( $(compgen -W "${short[*]}" -- "$cur" )
+        COMPREPLY+=( $(compgen -c -- "$cur") )
+    fi
+}
+
+complete -F _baur baur
