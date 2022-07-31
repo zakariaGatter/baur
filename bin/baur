@@ -142,24 +142,23 @@ unset file line CONTINUE resoult PkgCount
 GetSourceFile(){
 PAGE=${PAGE:-/packages?O=0&K=${1// /+}}
 bdot "Retrieving sources ...\r"
+
+# check if there is any packages founded
+[ "${PACKAGES[*]}" ] || die "'$pkg' Did you type the name correctly."
+
 # Download source webpage
 while [ "$PAGE" ]; do
     if curl -s "https://aur.archlinux.org$PAGE" --connect-timeout 5 -o $SOURCE_TMP; then
         unset PAGE
         AmpConvert $SOURCE_TMP
-        bdot "Get Search informations ...\r"
+        bdot "Get Search information ...\r"
         GetSearchInfo $SOURCE_TMP
         bdot "Get Packages List from source ...\r"
         GetPackageList $SOURCE_TMP
-        PackageCheck
-        NiceList
         UserPick
     else
         die "First of all, do you have Network?"
     fi
-
-    printf "%*s" "$COLUMNS"
-    [ "$(< $SOURCE_TMP)" ] || die "'$pkg' Did you type the name correct"
 done
 }
 
@@ -167,8 +166,8 @@ done
 # CHECK IF THE PACGE IN INSTALLED #
 #---------------------------------#
 # pacman -Qm give you a list of all aur packages install on your system
-# creat a for loop go through all packages resoult from the search and check if there are already install in the system 
-# create a varible INSTALL with the package number and asign it as install
+# create a for loop go through all packages result from the search and check if there are already install in the system
+# create a variable INSTALL with the package number and assign it as install
 PackageCheck(){
 for number in ${!PACKAGES[@]}; do
     (pacman -Qqm ${PACKAGES[$number]%%;*} &> /dev/null) && INSTALL[$number]+="[Installed]"
@@ -206,7 +205,10 @@ done
 #--------------------#
 UserPick(){
 while true ; do
-printf "${Cblue}::$Coff %s ${Ccyan}[N]ext/[P]rev${Coff} page, ${Cgreen}[R]efresh${Coff}\n" "${INFO[*]}"
+    clear
+    PackageCheck
+    NiceList
+printf "${Cblue}::$Coff %s ${Ccyan}[N]ext/[P]rev${Coff} page.\n" "${INFO[*]}"
 printf "${Cblue}::$Coff Packages to Install (ex: 1 2 3), ${Cred}[Q/q]uit.${Coff}\n"
 printf "${Cblue}::$Coff "
 read CHOICE
@@ -231,9 +233,6 @@ elif [ "$CHOICE" = "P" ]; then
             break 2
         fi
     done < <(tail -30 $SOURCE_TMP)
-elif [ "$CHOICE" = "R" ]; then
-    PackageCheck
-    NiceList
 else
     for number in ${CHOICE[@]}; do
         if (( number <= 0 || number > ${#PACKAGES[@]} )); then
@@ -251,7 +250,7 @@ unset pName pVersion pVote pPopularity pDescription pMaintainer pInstall NEXT PE
 #-----------------------------------#
 # DOWNLOAD AND INSTALL AUR PACKAGES #
 #-----------------------------------#
-# download snapshot tarball 
+# download snapshot tarball
 # decompress tarball
 # change dir to package folder
 # make package and install it
@@ -308,14 +307,14 @@ while read -a line ; do
 
     if curl -s "https://aur.archlinux.org/cgit/aur.git/plain/PKGBUILD?h=$PkgName" --connect-timeout 5 -o "$SOURCE_TMP"; then
         source "$SOURCE_TMP" 2> /dev/null || {
-            bdot "Check for '$PkgName' Local Install.\n"
+            [ "${options[q]}" ] || bdot "Check for '$PkgName' Local Install.\n"
             continue
         }
         NewVersion=$pkgver
         NNewVersion=${NewVersion%.*}
         NNewVersion=${NNewVersion//[[:alpha:]-\.+_]}
         [ "$NPkgVersion" -lt "$NNewVersion" ] && PkgToUpdate+=( "$PkgName ${Coff}Old(${Cred}$PkgVersion${Coff}) -> New(${Cgreen}$NewVersion${Coff})" )
-        bdot "Check for '$PkgName' New Version.\n"
+        [ "${options[q]}" ] || bdot "Check for '$PkgName' New Version.\n"
     else
         die "Network slow as a snale"
     fi
@@ -347,7 +346,7 @@ if curl -s "https://aur.archlinux.org/packages/$pkg" --connect-timeout 5 -o $SOU
     while read line ; do
         [[ $line =~ pkginfo ]] && TABLE=true
         [[ $line =~ pkgdepslist ]] && DEPS=true
-      
+
         if [ "$TABLE" ]; then
             if [ "$line" = "</table>" ]; then
                 unset TABLE
@@ -399,6 +398,7 @@ OPTIONS:
     -S <Pkgs>   Install Giving Packages
     -R <Pkgs>   Remove Giving Packages
     -U          Update All AUR Packages
+    -q          Shwo no information when update
     -i <Pkg>    Show Pkg information
     -c          Disable coloring
     -h          Show this help dialog
@@ -412,7 +412,7 @@ HELP
 #---------------#
 MainFunc(){
 while getopts ':s:S:R:i:Uchv' OPT ; do
-    case "$OPT" in 
+    case "$OPT" in
         s ) options[s]=true
             SEARCH="$OPTARG"
             ;;
@@ -428,6 +428,7 @@ while getopts ':s:S:R:i:Uchv' OPT ; do
                 shift
             done
             ;;
+        q ) options[q]=true ;;
         i ) options[i]=true
             SEARCH="$OPTARG"
             ;;
@@ -435,7 +436,7 @@ while getopts ':s:S:R:i:Uchv' OPT ; do
         c ) options[c]=true ;;
         h ) options[h]=true ;;
         v ) options[v]=true ;;
-        : ) die "Empty Box!! what should i do with this." ;;
+        : ) die "Empty Box!! What should i do with this." ;;
         * ) die "There no one with this name '-$OPTARG' lives here.\nAsk '$name -h'." ;;
     esac
 done
@@ -461,7 +462,7 @@ Cwhite='\e[1;37m'
 #-------------------#
 # C OPTION NO COLOR #
 #-------------------#
-if [ "${options[c]}" ]; then 
+if [ "${options[c]}" ]; then
     unset Coff Cred Cgreen Cyellow Cblue Cmagenta Ccyan Cwhite
     NC_MAKEPKG="-m"
     NC_PACMAN="--color=never"
