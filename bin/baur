@@ -10,6 +10,8 @@ declare -r Version="0.1.0"
 # GENERAL VARIABLE #
 #------------------#
 declare -A PACKAGES     # list of packages in search resoult
+declare -A PKGINFO
+declare -A FLAGGED
 declare -A INSTALL      # check if the package is installed
 declare -A options      # user options
 declare -u CHOICE       # menu picker option make variable upper case
@@ -87,53 +89,53 @@ done
 unset amp_char nor_char file number
 }
 
-#------------------------#
-# GET SEARCH INFORMATION #
-#------------------------#
-# get the total packages and how many pages there is
-# loop through the temp file line by line
-# when you find '<dic class="pkglist-stats">'
-# start gathering information
-# exit if you find '<p>' the end of the paragraph the information end at it
-GetSearchInfo(){
-file="$1"
-unset INFO
+#----------------------------------#
+# GET INFORMATION FROM SOURCE PAGE #
+#----------------------------------#
+GetInformation(){
+count=0
 
-while read line ; do
-    if [[ $line =~ "pkglist-stats" ]] && [ -z "$CONTINUE" ]; then
-        CONTINUE=true
-        continue
-    elif [ "$CONTINUE" ]; then
-        [ "$line" = "</p>" ] && break
-        read resoult < <(sed "s/<[^>]*>//g" <<< "$line")
-        [ "$resoult" ] && INFO+=( "$resoult" )
-    fi
-done < $file
-unset file line CONTINUE resoult
-}
+while read line; do
+    [ "$line" ] || continue
+    [[ $line =~ pkglist-stats ]] && StatsBegin=true
+    [[ $line =~ pkglist-nav ]] && NextBegin=true
+    [ "$line" = "<tbody>" ] && ListBegin=true
 
-#----------------------#
-# GET LIST OF PACKAGES #
-#----------------------#
-GetPackageList(){
-file="$1"
-declare -i PkgCount=0
-unset PACKAGES
-
-while read line ; do
-    if [[ $line =~ /packages/[a-zA-Z0-9]+ ]]; then
-        CONTINUE=true
-        ((PkgCount++))
-    elif [ "$CONTINUE" ]; then
-        if [ "$line" = "</tr>" ]; then
-            unset CONTINUE
+    if [ "$StatsBegin" ]; then
+        if [ "$line" = "</p>" ]; then
+            unset StatsBegin
         else
-            read resoult < <(sed "s/<[^>]*>//g" <<< "$line" )
-            [ "$resoult" ] && PACKAGES[$PkgCount]+="$resoult;"
+            read resoult < <(sed "s/<[^>]*>//g" <<< $line)
+            [ "$result" ] && STATUS+="$result "
+        fi
+    elif [ "$NextBegin" ]; then
+        if [[ $line =~ Next ]] || [[ $line =~ Previous ]]; then
+            IFS='"' read -a resoult <<< $line
+            for ((i=0; i<=${#resoult[@]}; i++)); do
+                if [[ $i =~ Next ]]; then
+                    NextPage="${resoult[$i - 1]}"
+                elif [[ $i =~ Previous ]]; then
+                    PrevPage="${resoult[$i - 1]}"
+                fi
+            done
+            unset NextBegin
+        fi
+    elif [ "$ListBegin" ]; then
+        [ "$line" = "</table>" ] && break
+        [ "$line" = "<tr>" ] && ((count++))
+
+        [[ $line =~ flagged ]] && FLAGGED[$count]="[Out-Of-Date]"
+
+        read resoult < <(sed "s/<[^>]*>//g" <<< $line)
+        if [ -z "${PACKAGES[$count]}" ]; then
+            [ "$resoult" ] && PACKAGES[$count]="$resoult"
+            (pacman -Qqm ${PACKAGES[$count]} &> /dev/null) && INSTALL[$count]+="[Installed]"
+        else
+            [ "$resoult" ] && eval "${PACKAGES[$count]//-/_}+=( '$resoult' )"
         fi
     fi
-done < $file
-unset file line CONTINUE resoult PkgCount
+done < "$1"
+unset resoult count
 }
 
 #-------------------------#
@@ -150,11 +152,9 @@ bdot "Retrieving sources ...\r"
 while [ "$PAGE" ]; do
     if curl -s "https://aur.archlinux.org$PAGE" --connect-timeout 5 -o $SOURCE_TMP; then
         unset PAGE
-        AmpConvert $SOURCE_TMP
+        AmpConvert "$SOURCE_TMP"
         bdot "Get Search information ...\r"
-        GetSearchInfo $SOURCE_TMP
-        bdot "Get Packages List from source ...\r"
-        GetPackageList $SOURCE_TMP
+        GetInformation "$SOURCE_TMP"
         UserPick
     else
         die "First of all, do you have Network?"
@@ -162,39 +162,28 @@ while [ "$PAGE" ]; do
 done
 }
 
-#---------------------------------#
-# CHECK IF THE PACGE IN INSTALLED #
-#---------------------------------#
-# pacman -Qm give you a list of all aur packages install on your system
-# create a for loop go through all packages result from the search and check if there are already install in the system
-# create a variable INSTALL with the package number and assign it as install
-PackageCheck(){
-for number in ${!PACKAGES[@]}; do
-    (pacman -Qqm ${PACKAGES[$number]%%;*} &> /dev/null) && INSTALL[$number]+="[Installed]"
-done
-unset number
-}
-
 #--------------------------#
 # SHOW LIST IN A NICE FORM #
 #--------------------------#
 NiceList(){
 # print package and there information
-for (( number=1; number<=${#PACKAGES[@]}; number++ )); do
-    IFS=";" read -a pkg <<< "${PACKAGES[$number]}"
-    pName="${pkg[0]}"
-    pVersion="${pkg[1]}"
-    pVote="${pkg[2]}"
-    pPopularity="${pkg[3]}"
-    pDescription="${pkg[4]}"
-    pMaintainer="${pkg[5]}"
-    pInstall="${INSTALL[$number]}"
+for (( num=1; num<=${#PACKAGES[@]}; num++ )); do
+    read -a pkg < <(eval "echo \${${PACKAGES[$num]//-/_}[@]}")
+    pName="${PACKAGES[$num]//_/-}"
+    pVersion="${pkg[0]}"
+    pVote="${pkg[1]}"
+    pPopularity="${pkg[2]}"
+    pDescription="${pkg[3]}"
+    pMaintainer="${pkg[4]}"
+    pFlagged="${FLAGGED[$num]}"
+    pInstall="${INSTALL[$num]}"
 
-    printf "${Cwhite}%.3d ${Ccyan}aur/${Cwhite}%s ${Cgreen}%s ${Cyellow}(%s %s %s)${Cred} %s${Coff}\n  %b\n\n" \
-        "$number" \
+    printf "${Cwhite}%.3d ${Ccyan}aur/${Cwhite}%s ${Cgreen}%s ${Cyellow}(%s %s %s)${Cred} %s%s${Coff}\n  %b\n\n" \
+        "$num" \
         "$pName" \
         "$pVersion" \
         "$pMaintainer" "$pVote" "$pPopularity" \
+        "$pFlagged" \
         "$pInstall" \
         "$pDescription"
 done
@@ -218,21 +207,9 @@ read CHOICE
 
 # press n or p for next or Prev
 if [ "$CHOICE" = "N" ]; then
-    while read ; do
-        if [[ $REPLY =~ Next ]]; then
-            IFS='"' read -a NEXT <<< "$REPLY"
-            PAGE="${NEXT[-6]}"
-            break 2
-        fi
-    done< <(tail -30 $SOURCE_TMP)
+    PAGE="$NextPage"
 elif [ "$CHOICE" = "P" ]; then
-    while read ; do
-        if [[ $REPLY =~ Previous ]]; then
-            IFS='"' read -a PERV <<< "$REPLY"
-            PAGE="${PERV[7]}"
-            break 2
-        fi
-    done < <(tail -30 $SOURCE_TMP)
+    PAGE="$PrevPage"
 else
     for number in ${CHOICE[@]}; do
         if (( number <= 0 || number > ${#PACKAGES[@]} )); then
@@ -464,8 +441,8 @@ Cwhite='\e[1;37m'
 #-------------------#
 if [ "${options[c]}" ]; then
     unset Coff Cred Cgreen Cyellow Cblue Cmagenta Ccyan Cwhite
-    NC_MAKEPKG="-m"
-    NC_PACMAN="--color=never"
+    declare -r NC_MAKEPKG="-m"
+    declare -r NC_PACMAN="--color=never"
 fi
 
 #------------------#
